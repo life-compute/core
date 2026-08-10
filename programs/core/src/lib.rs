@@ -40,7 +40,7 @@ pub mod state;
 use instructions::*;
 use state::DifficultyTier;
 
-declare_id!("3dYbT2egotmpGBoLZe2pytsraffxre7V5dySsTKgxYiC");
+declare_id!("3AZnjfvbLCpb1QkvaTYRTY2YafXT3vM32bmBBM3H8FdL");
 
 #[program]
 pub mod life_core {

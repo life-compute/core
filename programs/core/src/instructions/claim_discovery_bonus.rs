@@ -92,6 +92,7 @@ pub struct ClaimDiscoveryBonus<'info> {
 
     #[account(
         mut,
+        constraint = network_config.current_week() > weekly_leaderboard.week @ LifeError::WeekNotClosed,
         constraint = weekly_leaderboard.leader_miner == miner.key() @ LifeError::NotTheWinner,
         constraint = !weekly_leaderboard.bonus_minted @ LifeError::BonusAlreadyMinted,
     )]

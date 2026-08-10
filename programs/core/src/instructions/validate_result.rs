@@ -159,14 +159,14 @@ pub struct ValidateResult<'info> {
         bump = network_config.bump,
         constraint = network_config.is_validator(&validator.key()) @ LifeError::NotAValidator,
     )]
-    pub network_config: Account<'info, NetworkConfig>,
+    pub network_config: Box<Account<'info, NetworkConfig>>,
 
     #[account(
         mut,
         seeds = [SEED_TARGET, &[result_submission.target_id]],
         bump = target.bump,
     )]
-    pub target: Account<'info, TargetAccount>,
+    pub target: Box<Account<'info, TargetAccount>>,
 
     #[account(
         mut,
@@ -188,7 +188,7 @@ pub struct ValidateResult<'info> {
         ],
         bump,
     )]
-    pub validation_record: Account<'info, ValidationRecord>,
+    pub validation_record: Box<Account<'info, ValidationRecord>>,
 
     /// init_if_needed: first confirmed result of the week creates the leaderboard account.
     #[account(
