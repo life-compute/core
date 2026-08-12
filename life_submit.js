@@ -19,6 +19,10 @@ const fs = require('fs');
   anchor.setProvider(provider);
 
   const idl     = JSON.parse(fs.readFileSync(args.idlPath));
+  // Override IDL address with the live program ID from args — prevents stale
+  // IDL address (e.g. after redeployment with a new keypair) from routing txns
+  // to the wrong program, which surfaces as "program does not exist".
+  idl.address   = args.programId;
   const program  = new anchor.Program(idl, provider);
   const PROG_ID  = new PublicKey(args.programId);
 
