@@ -1,5 +1,5 @@
 {
-  "address": "3AZnjfvbLCpb1QkvaTYRTY2YafXT3vM32bmBBM3H8FdL",
+  "address": "5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p",
   "metadata": {
     "name": "life_core",
     "version": "0.1.0",
@@ -263,6 +263,11 @@
       ],
       "accounts": [
         {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
           "name": "validator",
           "writable": true,
           "signer": true
@@ -343,10 +348,6 @@
         },
         {
           "name": "token_program"
-        },
-        {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe8bv"
         },
         {
           "name": "system_program"

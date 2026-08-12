@@ -175,7 +175,12 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
 
 #[derive(Accounts)]
 pub struct ValidateResult<'info> {
+    /// The account paying rent for new accounts (validation_record, weekly_leaderboard).
+    /// Separated from `validator` so validators don't need to hold SOL — they only sign.
     #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// Registered validator — must sign but does NOT pay rent.
     pub validator: Signer<'info>,
 
     #[account(
@@ -210,7 +215,7 @@ pub struct ValidateResult<'info> {
 
     #[account(
         init,
-        payer = validator,
+        payer = payer,
         space = ValidationRecord::LEN,
         seeds = [
             SEED_VALIDATION,
@@ -223,7 +228,7 @@ pub struct ValidateResult<'info> {
 
     #[account(
         init_if_needed,
-        payer = validator,
+        payer = payer,
         space = WeeklyLeaderboard::LEN,
         seeds = [
             SEED_LEADERBOARD,
