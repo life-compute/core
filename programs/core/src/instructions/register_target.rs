@@ -21,7 +21,7 @@ pub fn register_target(
     target.best_score_this_week = 0.0;
     target.best_scorer_this_week = Pubkey::default();
     target.week_number = 0;
-    target.total_confirmed = 0;
+    target.hit_count = 0;
     target.bump = ctx.bumps.target;
 
     emit!(TargetRegistered {

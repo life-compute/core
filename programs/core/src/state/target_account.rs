@@ -55,7 +55,8 @@ pub struct TargetAccount {
     pub week_number: u64,
 
     /// Cumulative count of confirmed results ever submitted for this target.
-    pub total_confirmed: u64,
+    /// Used by the halving mechanism: rewards reduce at 100 and 1,000 hits.
+    pub hit_count: u64,
 
     pub bump: u8,
 }
@@ -69,7 +70,7 @@ impl TargetAccount {
         + 4   // best_score_this_week (f32)
         + 32  // best_scorer_this_week
         + 8   // week_number
-        + 8   // total_confirmed
+        + 8   // hit_count
         + 1   // bump
         + 32; // padding
 }

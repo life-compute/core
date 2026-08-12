@@ -65,8 +65,14 @@ pub struct RewardMinted {
     pub miner: Pubkey,
     pub result_pda: Pubkey,
     pub target_id: u8,
-    /// Raw token units minted.
+    /// Base reward for this difficulty tier (before halving).
+    pub base_reward_raw: u64,
+    /// Final reward after both halving layers applied (raw units).
     pub amount_raw: u64,
+    /// Supply milestone tier: 0=100%, 1=50%, 2=25%, 3=12.5%
+    pub supply_tier: u8,
+    /// Hit count tier: 0=100%, 1=75%, 2=50%
+    pub hit_tier: u8,
     pub total_minted_after: u64,
     pub slot: i64,
 }

@@ -53,3 +53,24 @@ pub const SEED_LEADERBOARD: &[u8] = b"leaderboard";
 
 // ─── Slots per week (~7 days at 400 ms/slot) ──────────────────────────────
 pub const SLOTS_PER_WEEK: u64 = EPOCH_DURATION_SLOTS * 7; // 1_512_000
+
+// ─── Halving: Layer 1 — Supply milestones (raw units, 6 decimals) ─────────
+
+/// End of tier 1 (100% rewards): 5,250,000 LIFE mined.
+pub const HALVING_MILESTONE_1: u64 =  5_250_000 * ONE_LIFE;
+
+/// End of tier 2 (50% rewards): 10,500,000 LIFE mined.
+pub const HALVING_MILESTONE_2: u64 = 10_500_000 * ONE_LIFE;
+
+/// End of tier 3 (25% rewards): 15,750,000 LIFE mined.
+/// Tier 4 (12.5%) applies above this threshold until supply cap.
+pub const HALVING_MILESTONE_3: u64 = 15_750_000 * ONE_LIFE;
+
+// ─── Halving: Layer 2 — Per-target hit count thresholds ──────────────────
+
+/// Below this many confirmed hits per target: 100% of tier reward.
+pub const HALVING_HIT_TIER_1: u64 = 100;
+
+/// At or above this many confirmed hits per target: 50% of tier reward.
+/// Between HALVING_HIT_TIER_1 and this value: 75%.
+pub const HALVING_HIT_TIER_2: u64 = 1_000;

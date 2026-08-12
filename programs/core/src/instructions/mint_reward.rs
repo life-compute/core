@@ -3,10 +3,24 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::RewardMinted;
+use crate::rewards::calculate_reward;
 use crate::state::{NetworkConfig, MinerAccount, ResultSubmission, ResultStatus};
 
 /// Permissionless crank: anyone can call this once a result is Confirmed.
-/// Mints the base $LIFE reward to the miner's Associated Token Account.
+/// Mints the halved $LIFE reward to the miner's Associated Token Account.
+///
+/// Reward = base_reward × supply_multiplier × hit_multiplier
+///
+/// Layer 1 (supply_multiplier — based on NetworkConfig.total_minted):
+///   0 – 5,250,000 LIFE mined      →  100%
+///   5,250,001 – 10,500,000 LIFE   →   50%
+///   10,500,001 – 15,750,000 LIFE  →   25%
+///   15,750,001 – 21,000,000 LIFE  →  12.5%
+///
+/// Layer 2 (hit_multiplier — based on TargetAccount.hit_count):
+///   0 – 99 confirmed hits          →  100% of tier reward
+///   100 – 999 confirmed hits       →   75% of tier reward
+///   1,000+ confirmed hits          →   50% of tier reward
 pub fn mint_reward(ctx: Context<MintReward>) -> Result<()> {
     // Capture immutable fields before taking mutable borrows
     let result_pda_key = ctx.accounts.result_submission.key();
@@ -28,10 +42,13 @@ pub fn mint_reward(ctx: Context<MintReward>) -> Result<()> {
     let target = &ctx.accounts.target;
     let miner_account = &mut ctx.accounts.miner_account;
 
-    // Derive reward amount from difficulty
-    let amount = target.difficulty.base_reward_raw();
+    // ── Two-layer halving ────────────────────────────────────────────────────
+    let base_reward = target.difficulty.base_reward_raw();
+    let (amount, supply_tier, hit_tier) =
+        calculate_reward(base_reward, config.total_minted, target.hit_count)
+            .ok_or(LifeError::Overflow)?;
 
-    // Supply cap check
+    // Supply cap check (uses the final halved amount)
     let new_total = config
         .total_minted
         .checked_add(amount)
@@ -71,7 +88,10 @@ pub fn mint_reward(ctx: Context<MintReward>) -> Result<()> {
         miner: result_miner,
         result_pda: result_pda_key,
         target_id: result_target_id,
+        base_reward_raw: base_reward,
         amount_raw: amount,
+        supply_tier,
+        hit_tier,
         total_minted_after: new_total,
         slot: Clock::get()?.slot as i64,
     });
