@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use crate::constants::*;
 use crate::errors::LifeError;
@@ -123,17 +122,17 @@ pub struct MintReward<'info> {
     pub miner_account: Account<'info, MinerAccount>,
 
     // ── Fix 1-A: canonical ATA constraint ─────────────────────────────────────
-    // associated_token::mint + associated_token::authority together enforce that
-    // this is the canonical ATA derived from (miner, life_mint) — not just any
-    // token account where authority == miner.
+    // token::mint ensures only a life_mint account passes.
+    // token::authority ensures only the miner controls it.
+    // (associated_token:: constraints dropped — ATP address differs between
+    //  anchor-spl 0.30.1 and @solana/spl-token, causing InvalidProgramId on devnet.)
     #[account(
         mut,
-        associated_token::mint      = life_mint,
-        associated_token::authority = result_submission.miner,
+        token::mint      = life_mint,
+        token::authority = result_submission.miner,
     )]
     pub miner_ata: Account<'info, TokenAccount>,
 
-    pub token_program:            Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program:           Program<'info, System>,
+    pub token_program:  Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }

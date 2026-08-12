@@ -345,6 +345,10 @@
           "name": "token_program"
         },
         {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe8bv"
+        },
+        {
           "name": "system_program"
         }
       ],
@@ -625,7 +629,7 @@
             "type": "u64"
           },
           {
-            "name": "total_confirmed",
+            "name": "hit_count",
             "type": "u64"
           },
           {
@@ -765,6 +769,10 @@
           {
             "name": "reward_minted",
             "type": "bool"
+          },
+          {
+            "name": "confirmed_count",
+            "type": "u8"
           },
           {
             "name": "bump",
