@@ -46,7 +46,9 @@ describe("life_core", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const PROGRAM_ID = new PublicKey("3AZnjfvbLCpb1QkvaTYRTY2YafXT3vM32bmBBM3H8FdL");
+  const PROGRAM_ID = new PublicKey(
+    "3AZnjfvbLCpb1QkvaTYRTY2YafXT3vM32bmBBM3H8FdL"
+  );
   const program = new anchor.Program<LifeCore>(
     require("../target/idl/life_core.json"),
     provider
@@ -89,11 +91,13 @@ describe("life_core", () => {
         anchor.web3.SystemProgram.transfer({
           fromPubkey: authority.publicKey,
           toPubkey: kp.publicKey,
-          lamports: 0.01 * anchor.web3.LAMPORTS_PER_SOL,  // 0.01 SOL each — enough for tx fees
+          lamports: 0.01 * anchor.web3.LAMPORTS_PER_SOL, // 0.01 SOL each — enough for tx fees
         })
       );
       const sig = await provider.sendAndConfirm(tx);
-      console.log(`    Funded ${kp.publicKey.toBase58().slice(0, 8)}... : ${sig}`);
+      console.log(
+        `    Funded ${kp.publicKey.toBase58().slice(0, 8)}... : ${sig}`
+      );
     }
   });
 
@@ -129,9 +133,16 @@ describe("life_core", () => {
     assert.equal(config.totalMinted.toString(), "0");
     assert.equal(config.currentEpoch.toString(), "0");
     assert.equal(config.validatorsRequired, VALIDATORS_REQUIRED);
-    assert.approximately(config.validationTolerance, VALIDATION_TOLERANCE, 0.001);
+    assert.approximately(
+      config.validationTolerance,
+      VALIDATION_TOLERANCE,
+      0.001
+    );
     assert.equal(config.validatorCount, 3);
-    assert.equal(config.validators[0].toBase58(), validator1.publicKey.toBase58());
+    assert.equal(
+      config.validators[0].toBase58(),
+      validator1.publicKey.toBase58()
+    );
     assert.isTrue(config.lifeMint.equals(lifeMintPda));
   });
 
@@ -544,7 +555,11 @@ describe("life_core", () => {
     await provider.sendAndConfirm(randoFundTx);
 
     const [validationPdaRando] = PublicKey.findProgramAddressSync(
-      [Buffer.from("validation"), resultPda.toBuffer(), rando.publicKey.toBuffer()],
+      [
+        Buffer.from("validation"),
+        resultPda.toBuffer(),
+        rando.publicKey.toBuffer(),
+      ],
       program.programId
     );
 
@@ -595,7 +610,9 @@ describe("life_core", () => {
       // Week is not closed (current_epoch=0 → current_week=0, leaderboard.week=0),
       // OR caller is not the leaderboard winner — both correctly reject the claim.
       assert.isTrue(
-        e.message.includes("WeekNotClosed") || e.message.includes("NotTheWinner") || e.message.includes("ConstraintMut"),
+        e.message.includes("WeekNotClosed") ||
+          e.message.includes("NotTheWinner") ||
+          e.message.includes("ConstraintMut"),
         `Expected WeekNotClosed or NotTheWinner, got: ${e.message}`
       );
     }
@@ -610,12 +627,20 @@ describe("life_core", () => {
     console.log("\n══════════════════════════════════════");
     console.log("  LIFE Compute — Test Suite Summary");
     console.log("══════════════════════════════════════");
-    console.log(`  Supply cap:        ${config.supplyCap.toString()} raw units`);
-    console.log(`  Total minted:      ${config.totalMinted.toString()} raw units`);
+    console.log(
+      `  Supply cap:        ${config.supplyCap.toString()} raw units`
+    );
+    console.log(
+      `  Total minted:      ${config.totalMinted.toString()} raw units`
+    );
     console.log(`  Current epoch:     ${config.currentEpoch.toString()}`);
     console.log(`  Validator count:   ${config.validatorCount}`);
-    console.log(`  Miner LIFE earned: ${minerAcc.totalLifeEarned.toString()} raw`);
-    console.log(`  Molecules screened:${minerAcc.moleculesScreened.toString()}`);
+    console.log(
+      `  Miner LIFE earned: ${minerAcc.totalLifeEarned.toString()} raw`
+    );
+    console.log(
+      `  Molecules screened:${minerAcc.moleculesScreened.toString()}`
+    );
     console.log(`  TP53 confirmed:    ${target.totalConfirmed.toString()}`);
     console.log("══════════════════════════════════════\n");
   });

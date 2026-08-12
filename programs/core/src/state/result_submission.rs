@@ -44,6 +44,10 @@ pub struct ResultSubmission {
     /// Set to true once mint_reward has been called successfully.
     pub reward_minted: bool,
 
+    /// Cumulative count of validators who independently confirmed this result.
+    /// Finalization requires confirmed_count >= NetworkConfig.validators_required.
+    pub confirmed_count: u8,
+
     pub bump: u8,
 }
 
@@ -61,8 +65,9 @@ impl ResultSubmission {
         + 4             // validation_score_sum (f32)
         + 32 * MAX_VALIDATORS_PER_RESULT // validator_list
         + 1             // reward_minted
+        + 1             // confirmed_count
         + 1             // bump
-        + 32;           // padding
+        + 31;           // padding (was 32; 1 byte consumed by confirmed_count)
 
     /// Return the SMILES as a &str slice (lossy if non-UTF8, but SMILES is ASCII).
     pub fn smiles_str(&self) -> &str {

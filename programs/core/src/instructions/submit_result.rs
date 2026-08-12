@@ -44,6 +44,7 @@ pub fn submit_result(
     result.validation_score_sum = 0.0;
     result.validator_list = [Pubkey::default(); 5];
     result.reward_minted = false;
+    result.confirmed_count = 0;
     result.bump = ctx.bumps.result_submission;
 
     // Mark the job as fulfilled (prevents double submission)

@@ -9,14 +9,14 @@ use crate::state::{
 
 /// A registered validator re-runs Boltz2 and posts their rescored affinity.
 ///
-/// Design: validators_required confirmations are needed to finalize.
-/// For the current 2-of-3 centralized validator set, this means the result is
-/// Confirmed once 2 validators confirm within the tolerance window.
-/// `validation_score_sum` accumulates ALL rescored affinities (used for avg).
-/// A future v2 should add `confirmed_count: u8` for a stricter majority check.
+/// Finalization uses strict M-of-N counting:
+/// - `confirmed_count` accumulates only validators whose rescore is within tolerance.
+/// - Status becomes Confirmed when confirmed_count >= validators_required.
+/// - Status becomes Rejected when the remaining unvoted slots cannot mathematically
+///   push confirmed_count to validators_required.
+/// Both paths require the full validators_required votes to have been cast first.
 pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> Result<()> {
     let validator_key = ctx.accounts.validator.key();
-    // Capture key before taking mutable borrows
     let result_pda_key = ctx.accounts.result_submission.key();
 
     let config = &ctx.accounts.network_config;
@@ -25,24 +25,20 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
     let record = &mut ctx.accounts.validation_record;
     let clock = Clock::get()?;
 
-    // Capture fields we need from result BEFORE the mutable borrow
+    // Capture immutable fields before mutable borrow of result
     let target_id;
     let claimed_affinity;
     let result_miner;
-    let result_epoch;
     {
         let result = &ctx.accounts.result_submission;
         target_id = result.target_id;
         claimed_affinity = result.claimed_affinity;
         result_miner = result.miner;
-        result_epoch = result.epoch;
 
-        // Guard: not already finalized
         require!(
             result.status == ResultStatus::Pending || result.status == ResultStatus::Validating,
             LifeError::ResultAlreadyFinalized
         );
-        // Guard: no double-vote
         require!(
             !result.validator_list[..result.validation_count as usize].contains(&validator_key),
             LifeError::ValidatorAlreadyVoted
@@ -53,7 +49,14 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
         );
     }
 
-    // Tolerance check: |rescored - claimed| / |claimed| <= tolerance
+    // ── Fix 2-B: reject non-finite rescored_affinity before accumulating ─────
+    require!(
+        rescored_affinity.is_finite(),
+        LifeError::InvalidAffinityScore
+    );
+
+    // Tolerance check: |rescored − claimed| / |claimed| ≤ tolerance
+    // claimed_affinity is guaranteed < 0.0 by submit_result, so denominator safe.
     let is_confirmed = claimed_affinity != 0.0
         && ((rescored_affinity - claimed_affinity) / claimed_affinity).abs()
             <= config.validation_tolerance;
@@ -66,7 +69,7 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
     record.validated_slot = clock.slot as i64;
     record.bump = ctx.bumps.validation_record;
 
-    // Now take mutable borrow of result
+    // Accumulate vote
     let result = &mut ctx.accounts.result_submission;
     let idx = result.validation_count as usize;
     result.validator_list[idx] = validator_key;
@@ -74,10 +77,24 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
         .validation_count
         .checked_add(1)
         .ok_or(LifeError::Overflow)?;
-    result.validation_score_sum += rescored_affinity;
+
+    // ── Fix 2-B: accumulate score sum with bounds guard ───────────────────────
+    let new_sum = result.validation_score_sum + rescored_affinity;
+    require!(new_sum.is_finite(), LifeError::Overflow);
+    result.validation_score_sum = new_sum;
+
     result.status = ResultStatus::Validating;
 
+    // ── Fix 4-A: accumulate confirmed_count independently ─────────────────────
+    if is_confirmed {
+        result.confirmed_count = result
+            .confirmed_count
+            .checked_add(1)
+            .ok_or(LifeError::Overflow)?;
+    }
+
     let validation_count = result.validation_count;
+    let confirmed_count = result.confirmed_count;
     let validation_score_sum = result.validation_score_sum;
 
     emit!(ValidationCast {
@@ -89,51 +106,58 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
         slot: clock.slot as i64,
     });
 
-    // Finalize once threshold reached
-    if validation_count >= config.validators_required {
-        if is_confirmed {
-            result.status = ResultStatus::Confirmed;
-            let avg_score = validation_score_sum / validation_count as f32;
+    // ── Fix 4-A: M-of-N finalization ──────────────────────────────────────────
+    // Confirmed: M independent confirmations received.
+    if confirmed_count >= config.validators_required {
+        result.status = ResultStatus::Confirmed;
 
-            emit!(ResultFinalized {
-                miner: result_miner,
-                result_pda: result_pda_key,
+        // ── Fix 4-C: leaderboard records validated average, not claimed score ─
+        let avg_score = validation_score_sum / validation_count as f32;
+
+        emit!(ResultFinalized {
+            miner: result_miner,
+            result_pda: result_pda_key,
+            target_id,
+            status: 0, // Confirmed
+            avg_validator_score: avg_score,
+            slot: clock.slot as i64,
+        });
+
+        // Leaderboard: more negative = stronger binding = better
+        let current_week = config.current_week();
+        if leaderboard.leader_score == 0.0 || avg_score < leaderboard.leader_score {
+            let prior = leaderboard.leader_score;
+            leaderboard.week = current_week;
+            leaderboard.target_id = target_id;
+            leaderboard.leader_miner = result_miner;
+            leaderboard.leader_score = avg_score;   // ← Fix 4-C: validated avg
+
+            emit!(LeaderboardUpdated {
+                week: current_week,
                 target_id,
-                status: 0, // Confirmed
-                avg_validator_score: avg_score,
-                slot: clock.slot as i64,
+                new_leader: result_miner,
+                new_score: avg_score,
+                prior_score: prior,
             });
+        }
 
-            // Update leaderboard (more negative = stronger binding = better)
-            let current_week = config.current_week();
-            if leaderboard.leader_score == 0.0 || claimed_affinity < leaderboard.leader_score {
-                let prior = leaderboard.leader_score;
-                leaderboard.week = current_week;
-                leaderboard.target_id = target_id;
-                leaderboard.leader_miner = result_miner;
-                leaderboard.leader_score = claimed_affinity;
+        // Target best score also uses validated average
+        if avg_score < target.best_score_this_week || target.best_score_this_week == 0.0 {
+            target.best_score_this_week = avg_score;   // ← Fix 4-C
+            target.best_scorer_this_week = result_miner;
+            target.week_number = current_week;
+        }
+        target.hit_count = target
+            .hit_count
+            .checked_add(1)
+            .ok_or(LifeError::Overflow)?;
 
-                emit!(LeaderboardUpdated {
-                    week: current_week,
-                    target_id,
-                    new_leader: result_miner,
-                    new_score: claimed_affinity,
-                    prior_score: prior,
-                });
-            }
-
-            // Update target stats
-            if claimed_affinity < target.best_score_this_week || target.best_score_this_week == 0.0
-            {
-                target.best_score_this_week = claimed_affinity;
-                target.best_scorer_this_week = result_miner;
-                target.week_number = current_week;
-            }
-            target.hit_count = target
-                .hit_count
-                .checked_add(1)
-                .ok_or(LifeError::Overflow)?;
-        } else {
+    } else {
+        // Rejected: remaining unvoted slots cannot reach the threshold
+        let remaining_slots = (MAX_VALIDATORS_PER_RESULT as u8)
+            .saturating_sub(validation_count);
+        let max_possible = confirmed_count.saturating_add(remaining_slots);
+        if max_possible < config.validators_required {
             result.status = ResultStatus::Rejected;
             emit!(ResultFinalized {
                 miner: result_miner,
@@ -168,8 +192,15 @@ pub struct ValidateResult<'info> {
     )]
     pub target: Box<Account<'info, TargetAccount>>,
 
+    // ── Fix 1-D: add seed constraint to bind result_submission to its PDA ────
     #[account(
         mut,
+        seeds = [
+            SEED_RESULT,
+            &result_submission.epoch.to_le_bytes(),
+            result_submission.miner.as_ref(),
+        ],
+        bump = result_submission.bump,
         constraint = (
             result_submission.status == ResultStatus::Pending ||
             result_submission.status == ResultStatus::Validating
@@ -190,7 +221,6 @@ pub struct ValidateResult<'info> {
     )]
     pub validation_record: Box<Account<'info, ValidationRecord>>,
 
-    /// init_if_needed: first confirmed result of the week creates the leaderboard account.
     #[account(
         init_if_needed,
         payer = validator,

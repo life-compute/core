@@ -74,3 +74,9 @@ pub const HALVING_HIT_TIER_1: u64 = 100;
 /// At or above this many confirmed hits per target: 50% of tier reward.
 /// Between HALVING_HIT_TIER_1 and this value: 75%.
 pub const HALVING_HIT_TIER_2: u64 = 1_000;
+
+// ─── Registration ─────────────────────────────────────────────────────────────
+
+/// Minimum SOL locked in the MinerAccount PDA on registration (anti-Sybil stake).
+/// 0.01 SOL = 10_000_000 lamports.  Recovered only if a close-account ix is added.
+pub const REGISTRATION_STAKE: u64 = 10_000_000;

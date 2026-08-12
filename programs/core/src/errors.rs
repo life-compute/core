@@ -53,6 +53,13 @@ pub enum LifeError {
     #[msg("Claimed affinity score must be negative (ΔG < 0 means binding)")]
     InvalidAffinityScore,
 
+    // ─── Registration ────────────────────────────────────────────────────────
+    #[msg("Registration stake transfer failed")]
+    StakeTransferFailed,
+
+    #[msg("Registration requires 0.01 SOL stake to prevent Sybil attacks")]
+    InsufficientStake,
+
     // ─── Validation ──────────────────────────────────────────────────────────
     #[msg("This validator has already voted on this result")]
     ValidatorAlreadyVoted,
