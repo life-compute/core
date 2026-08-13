@@ -32,7 +32,7 @@ pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE; // 100 LIFE
 // ─── Max sizes ────────────────────────────────────────────────────────────
 
 /// Maximum number of registered cancer targets.
-pub const MAX_TARGETS: u8 = 10;
+pub const MAX_TARGETS: u8 = 30;
 
 /// SMILES string character limit (covers 99%+ of known drugs).
 pub const MAX_SMILES_LEN: usize = 512;
