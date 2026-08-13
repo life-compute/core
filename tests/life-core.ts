@@ -18,6 +18,7 @@ import { assert } from "chai";
 const ONE_LIFE = new BN(1_000_000);
 const SUPPLY_CAP = ONE_LIFE.muln(21_000_000);
 const EPOCH_SLOTS = new BN(216_000);
+const FOUNDATION_WALLET = new PublicKey("2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb");
 const VALIDATORS_REQUIRED = 2;
 const VALIDATION_TOLERANCE = 0.05;
 
@@ -223,6 +224,8 @@ describe("life_core", () => {
       .accounts({
         miner: miner.publicKey,
         minerAccount: minerAccountPda,
+        networkConfig: networkConfigPda,
+        foundation: FOUNDATION_WALLET,
         systemProgram: SystemProgram.programId,
       })
       .signers([miner])

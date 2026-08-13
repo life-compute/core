@@ -1,10 +1,16 @@
-{
-  "address": "DzcQHhTPuiqxCxZurDbEAaV1U2JBFXWy6JG1LE6WsKvJ",
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/life_core.json`.
+ */
+export type LifeCore = {
+  "address": "EBehApg6JqPYLjou7vRYY5FfBQbHCJgBTr2Mtiq8n6bg",
   "metadata": {
-    "name": "life_core",
+    "name": "lifeCore",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "LIFE Compute \u2014 Decentralized cancer drug discovery network"
+    "description": "LIFE Compute — Decentralized cancer drug discovery network"
   },
   "instructions": [
     {
@@ -26,21 +32,21 @@
           "signer": true
         },
         {
-          "name": "network_config",
+          "name": "networkConfig",
           "writable": true
         },
         {
-          "name": "life_mint",
+          "name": "lifeMint",
           "writable": true
         },
         {
-          "name": "mint_authority"
+          "name": "mintAuthority"
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         },
         {
           "name": "rent"
@@ -48,23 +54,23 @@
       ],
       "args": [
         {
-          "name": "supply_cap",
+          "name": "supplyCap",
           "type": "u64"
         },
         {
-          "name": "epoch_duration_slots",
+          "name": "epochDurationSlots",
           "type": "u64"
         },
         {
-          "name": "validators_required",
+          "name": "validatorsRequired",
           "type": "u8"
         },
         {
-          "name": "validation_tolerance",
+          "name": "validationTolerance",
           "type": "f32"
         },
         {
-          "name": "initial_validators",
+          "name": "initialValidators",
           "type": {
             "vec": "pubkey"
           }
@@ -72,7 +78,7 @@
       ]
     },
     {
-      "name": "register_target",
+      "name": "registerTarget",
       "discriminator": [
         206,
         50,
@@ -90,23 +96,23 @@
           "signer": true
         },
         {
-          "name": "network_config"
+          "name": "networkConfig"
         },
         {
           "name": "target",
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": [
         {
-          "name": "target_id",
+          "name": "targetId",
           "type": "u8"
         },
         {
-          "name": "uniprot_id",
+          "name": "uniprotId",
           "type": {
             "array": [
               "u8",
@@ -118,14 +124,14 @@
           "name": "difficulty",
           "type": {
             "defined": {
-              "name": "DifficultyTier"
+              "name": "difficultyTier"
             }
           }
         }
       ]
     },
     {
-      "name": "register_miner",
+      "name": "registerMiner",
       "discriminator": [
         101,
         185,
@@ -143,11 +149,11 @@
           "signer": true
         },
         {
-          "name": "miner_account",
+          "name": "minerAccount",
           "writable": true
         },
         {
-          "name": "network_config",
+          "name": "networkConfig",
           "writable": true
         },
         {
@@ -155,13 +161,13 @@
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": []
     },
     {
-      "name": "register_validator",
+      "name": "registerValidator",
       "discriminator": [
         118,
         98,
@@ -179,7 +185,7 @@
           "signer": true
         },
         {
-          "name": "network_config",
+          "name": "networkConfig",
           "writable": true
         },
         {
@@ -187,13 +193,13 @@
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": []
     },
     {
-      "name": "assign_job",
+      "name": "assignJob",
       "discriminator": [
         37,
         235,
@@ -211,7 +217,7 @@
           "signer": true
         },
         {
-          "name": "network_config"
+          "name": "networkConfig"
         },
         {
           "name": "target"
@@ -220,26 +226,26 @@
           "name": "miner"
         },
         {
-          "name": "miner_account",
+          "name": "minerAccount",
           "writable": true
         },
         {
-          "name": "job_assignment",
+          "name": "jobAssignment",
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": [
         {
-          "name": "target_id",
+          "name": "targetId",
           "type": "u8"
         }
       ]
     },
     {
-      "name": "submit_result",
+      "name": "submitResult",
       "discriminator": [
         240,
         42,
@@ -257,25 +263,25 @@
           "signer": true
         },
         {
-          "name": "network_config"
+          "name": "networkConfig"
         },
         {
-          "name": "miner_account",
+          "name": "minerAccount",
           "writable": true
         },
         {
           "name": "owner"
         },
         {
-          "name": "job_assignment",
+          "name": "jobAssignment",
           "writable": true
         },
         {
-          "name": "result_submission",
+          "name": "resultSubmission",
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": [
@@ -284,13 +290,13 @@
           "type": "string"
         },
         {
-          "name": "claimed_affinity",
+          "name": "claimedAffinity",
           "type": "f32"
         }
       ]
     },
     {
-      "name": "validate_result",
+      "name": "validateResult",
       "discriminator": [
         4,
         64,
@@ -303,47 +309,47 @@
       ],
       "accounts": [
         {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
+                    {
+            "name": "payer",
+            "writable": true,
+            "signer": true
+          },
           "name": "validator",
           "writable": true,
           "signer": true
         },
         {
-          "name": "network_config"
+          "name": "networkConfig"
         },
         {
           "name": "target",
           "writable": true
         },
         {
-          "name": "result_submission",
+          "name": "resultSubmission",
           "writable": true
         },
         {
-          "name": "validation_record",
+          "name": "validationRecord",
           "writable": true
         },
         {
-          "name": "weekly_leaderboard",
+          "name": "weeklyLeaderboard",
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": [
         {
-          "name": "rescored_affinity",
+          "name": "rescoredAffinity",
           "type": "f32"
         }
       ]
     },
     {
-      "name": "mint_reward",
+      "name": "mintReward",
       "discriminator": [
         172,
         211,
@@ -361,42 +367,42 @@
           "signer": true
         },
         {
-          "name": "network_config",
+          "name": "networkConfig",
           "writable": true
         },
         {
-          "name": "life_mint",
+          "name": "lifeMint",
           "writable": true
         },
         {
-          "name": "mint_authority"
+          "name": "mintAuthority"
         },
         {
-          "name": "result_submission",
+          "name": "resultSubmission",
           "writable": true
         },
         {
           "name": "target"
         },
         {
-          "name": "miner_account",
+          "name": "minerAccount",
           "writable": true
         },
         {
-          "name": "miner_ata",
+          "name": "minerAta",
           "writable": true
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": []
     },
     {
-      "name": "claim_discovery_bonus",
+      "name": "claimDiscoveryBonus",
       "discriminator": [
         37,
         146,
@@ -413,38 +419,38 @@
           "signer": true
         },
         {
-          "name": "network_config"
+          "name": "networkConfig"
         },
         {
-          "name": "life_mint",
+          "name": "lifeMint",
           "writable": true
         },
         {
-          "name": "mint_authority"
+          "name": "mintAuthority"
         },
         {
-          "name": "weekly_leaderboard",
+          "name": "weeklyLeaderboard",
           "writable": true
         },
         {
-          "name": "miner_account",
+          "name": "minerAccount",
           "writable": true
         },
         {
-          "name": "miner_ata",
+          "name": "minerAta",
           "writable": true
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program"
+          "name": "systemProgram"
         }
       ],
       "args": []
     },
     {
-      "name": "advance_epoch",
+      "name": "advanceEpoch",
       "discriminator": [
         93,
         138,
@@ -461,75 +467,16 @@
           "signer": true
         },
         {
-          "name": "network_config",
+          "name": "networkConfig",
           "writable": true
         }
       ],
       "args": []
-    },
-    {
-      "name": "updateValidators",
-      "discriminator": [
-        211,
-        66,
-        122,
-        122,
-        121,
-        107,
-        148,
-        111
-      ],
-      "accounts": [
-        {
-          "name": "authority",
-          "writable": false,
-          "signer": true
-        },
-        {
-          "name": "networkConfig",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  110,
-                  101,
-                  116,
-                  119,
-                  111,
-                  114,
-                  107,
-                  95,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "newValidators",
-          "type": {
-            "vec": "pubkey"
-          }
-        },
-        {
-          "name": "validatorsRequired",
-          "type": "u8"
-        }
-      ]
     }
   ],
   "accounts": [
     {
-      "name": "NetworkConfig",
+      "name": "networkConfig",
       "discriminator": [
         94,
         196,
@@ -542,7 +489,7 @@
       ]
     },
     {
-      "name": "TargetAccount",
+      "name": "targetAccount",
       "discriminator": [
         140,
         246,
@@ -555,7 +502,7 @@
       ]
     },
     {
-      "name": "MinerAccount",
+      "name": "minerAccount",
       "discriminator": [
         232,
         196,
@@ -568,7 +515,7 @@
       ]
     },
     {
-      "name": "JobAssignment",
+      "name": "jobAssignment",
       "discriminator": [
         33,
         158,
@@ -581,7 +528,7 @@
       ]
     },
     {
-      "name": "ResultSubmission",
+      "name": "resultSubmission",
       "discriminator": [
         214,
         115,
@@ -594,7 +541,7 @@
       ]
     },
     {
-      "name": "ValidationRecord",
+      "name": "validationRecord",
       "discriminator": [
         237,
         185,
@@ -607,7 +554,7 @@
       ]
     },
     {
-      "name": "WeeklyLeaderboard",
+      "name": "weeklyLeaderboard",
       "discriminator": [
         112,
         136,
@@ -620,9 +567,76 @@
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "unauthorized",
+      "msg": "unauthorized"
+    },
+    {
+      "code": 6001,
+      "name": "notAValidator",
+      "msg": "Signer is not a registered validator."
+    },
+    {
+      "code": 6002,
+      "name": "supplyCapExceeded",
+      "msg": "Supply cap exceeded"
+    },
+    {
+      "code": 6003,
+      "name": "invalidAffinityScore",
+      "msg": "Affinity score must be negative"
+    },
+    {
+      "code": 6004,
+      "name": "targetInactive",
+      "msg": "Target is not active"
+    },
+    {
+      "code": 6005,
+      "name": "jobAlreadyFulfilled",
+      "msg": "Job already fulfilled"
+    },
+    {
+      "code": 6006,
+      "name": "resultAlreadyFinalized",
+      "msg": "Result already finalized"
+    },
+    {
+      "code": 6007,
+      "name": "rewardAlreadyMinted",
+      "msg": "Reward already minted"
+    },
+    {
+      "code": 6008,
+      "name": "resultNotConfirmed",
+      "msg": "Result is not yet confirmed — cannot mint reward."
+    },
+    {
+      "code": 6009,
+      "name": "weekNotClosed",
+      "msg": "Week not yet closed"
+    },
+    {
+      "code": 6010,
+      "name": "notLeader",
+      "msg": "Not the weekly leader"
+    },
+    {
+      "code": 6011,
+      "name": "bonusAlreadyMinted",
+      "msg": "Bonus already minted"
+    },
+    {
+      "code": 6012,
+      "name": "epochNotReady",
+      "msg": "Epoch not ready to advance"
+    }
+  ],
   "types": [
     {
-      "name": "NetworkConfig",
+      "name": "networkConfig",
       "type": {
         "kind": "struct",
         "fields": [
@@ -631,35 +645,35 @@
             "type": "pubkey"
           },
           {
-            "name": "life_mint",
+            "name": "lifeMint",
             "type": "pubkey"
           },
           {
-            "name": "supply_cap",
+            "name": "supplyCap",
             "type": "u64"
           },
           {
-            "name": "total_minted",
+            "name": "totalMinted",
             "type": "u64"
           },
           {
-            "name": "current_epoch",
+            "name": "currentEpoch",
             "type": "u64"
           },
           {
-            "name": "epoch_start_slot",
+            "name": "epochStartSlot",
             "type": "i64"
           },
           {
-            "name": "epoch_duration_slots",
+            "name": "epochDurationSlots",
             "type": "u64"
           },
           {
-            "name": "validators_required",
+            "name": "validatorsRequired",
             "type": "u8"
           },
           {
-            "name": "validation_tolerance",
+            "name": "validationTolerance",
             "type": "f32"
           },
           {
@@ -672,7 +686,7 @@
             }
           },
           {
-            "name": "validator_count",
+            "name": "validatorCount",
             "type": "u8"
           },
           {
@@ -680,23 +694,23 @@
             "type": "u8"
           },
           {
-            "name": "mint_authority_bump",
+            "name": "mintAuthorityBump",
             "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "TargetAccount",
+      "name": "targetAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "target_id",
+            "name": "targetId",
             "type": "u8"
           },
           {
-            "name": "uniprot_id",
+            "name": "uniprotId",
             "type": {
               "array": [
                 "u8",
@@ -708,28 +722,28 @@
             "name": "difficulty",
             "type": {
               "defined": {
-                "name": "DifficultyTier"
+                "name": "difficultyTier"
               }
             }
           },
           {
-            "name": "is_active",
+            "name": "isActive",
             "type": "bool"
           },
           {
-            "name": "best_score_this_week",
+            "name": "bestScoreThisWeek",
             "type": "f32"
           },
           {
-            "name": "best_scorer_this_week",
+            "name": "bestScorerThisWeek",
             "type": "pubkey"
           },
           {
-            "name": "week_number",
+            "name": "weekNumber",
             "type": "u64"
           },
           {
-            "name": "hit_count",
+            "name": "hitCount",
             "type": "u64"
           },
           {
@@ -740,7 +754,7 @@
       }
     },
     {
-      "name": "MinerAccount",
+      "name": "minerAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -749,19 +763,19 @@
             "type": "pubkey"
           },
           {
-            "name": "total_life_earned",
+            "name": "totalLifeEarned",
             "type": "u64"
           },
           {
-            "name": "molecules_screened",
+            "name": "moleculesScreened",
             "type": "u64"
           },
           {
-            "name": "last_epoch",
+            "name": "lastEpoch",
             "type": "u64"
           },
           {
-            "name": "is_registered",
+            "name": "isRegistered",
             "type": "bool"
           },
           {
@@ -772,7 +786,7 @@
       }
     },
     {
-      "name": "JobAssignment",
+      "name": "jobAssignment",
       "type": {
         "kind": "struct",
         "fields": [
@@ -781,7 +795,7 @@
             "type": "pubkey"
           },
           {
-            "name": "target_id",
+            "name": "targetId",
             "type": "u8"
           },
           {
@@ -789,11 +803,11 @@
             "type": "u64"
           },
           {
-            "name": "assigned_slot",
+            "name": "assignedSlot",
             "type": "i64"
           },
           {
-            "name": "is_fulfilled",
+            "name": "isFulfilled",
             "type": "bool"
           },
           {
@@ -804,7 +818,7 @@
       }
     },
     {
-      "name": "ResultSubmission",
+      "name": "resultSubmission",
       "type": {
         "kind": "struct",
         "fields": [
@@ -813,7 +827,7 @@
             "type": "pubkey"
           },
           {
-            "name": "target_id",
+            "name": "targetId",
             "type": "u8"
           },
           {
@@ -830,35 +844,35 @@
             }
           },
           {
-            "name": "smiles_len",
+            "name": "smilesLen",
             "type": "u16"
           },
           {
-            "name": "claimed_affinity",
+            "name": "claimedAffinity",
             "type": "f32"
           },
           {
-            "name": "submitted_slot",
+            "name": "submittedSlot",
             "type": "i64"
           },
           {
             "name": "status",
             "type": {
               "defined": {
-                "name": "ResultStatus"
+                "name": "resultStatus"
               }
             }
           },
           {
-            "name": "validation_count",
+            "name": "validationCount",
             "type": "u8"
           },
           {
-            "name": "validation_score_sum",
+            "name": "validationScoreSum",
             "type": "f32"
           },
           {
-            "name": "validator_list",
+            "name": "validatorList",
             "type": {
               "array": [
                 "pubkey",
@@ -867,11 +881,11 @@
             }
           },
           {
-            "name": "reward_minted",
+            "name": "rewardMinted",
             "type": "bool"
           },
           {
-            "name": "confirmed_count",
+            "name": "confirmedCount",
             "type": "u8"
           },
           {
@@ -882,7 +896,7 @@
       }
     },
     {
-      "name": "ValidationRecord",
+      "name": "validationRecord",
       "type": {
         "kind": "struct",
         "fields": [
@@ -891,19 +905,19 @@
             "type": "pubkey"
           },
           {
-            "name": "result_pda",
+            "name": "resultPda",
             "type": "pubkey"
           },
           {
-            "name": "rescored_affinity",
+            "name": "rescoredAffinity",
             "type": "f32"
           },
           {
-            "name": "is_confirmed",
+            "name": "isConfirmed",
             "type": "bool"
           },
           {
-            "name": "validated_slot",
+            "name": "validatedSlot",
             "type": "i64"
           },
           {
@@ -914,7 +928,7 @@
       }
     },
     {
-      "name": "WeeklyLeaderboard",
+      "name": "weeklyLeaderboard",
       "type": {
         "kind": "struct",
         "fields": [
@@ -923,19 +937,19 @@
             "type": "u64"
           },
           {
-            "name": "target_id",
+            "name": "targetId",
             "type": "u8"
           },
           {
-            "name": "leader_miner",
+            "name": "leaderMiner",
             "type": "pubkey"
           },
           {
-            "name": "leader_score",
+            "name": "leaderScore",
             "type": "f32"
           },
           {
-            "name": "bonus_minted",
+            "name": "bonusMinted",
             "type": "bool"
           },
           {
@@ -946,108 +960,41 @@
       }
     },
     {
-      "name": "DifficultyTier",
+      "name": "difficultyTier",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Easy"
+            "name": "easy"
           },
           {
-            "name": "Medium"
+            "name": "medium"
           },
           {
-            "name": "Hard"
+            "name": "hard"
           }
         ]
       }
     },
     {
-      "name": "ResultStatus",
+      "name": "resultStatus",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Pending"
+            "name": "pending"
           },
           {
-            "name": "Validating"
+            "name": "validating"
           },
           {
-            "name": "Confirmed"
+            "name": "confirmed"
           },
           {
-            "name": "Rejected"
+            "name": "rejected"
           }
         ]
       }
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "Unauthorized",
-      "msg": "Unauthorized"
-    },
-    {
-      "code": 6001,
-      "name": "NotAValidator",
-      "msg": "Signer is not a registered validator."
-    },
-    {
-      "code": 6002,
-      "name": "SupplyCapExceeded",
-      "msg": "Supply cap exceeded"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidAffinityScore",
-      "msg": "Affinity score must be negative"
-    },
-    {
-      "code": 6004,
-      "name": "TargetInactive",
-      "msg": "Target is not active"
-    },
-    {
-      "code": 6005,
-      "name": "JobAlreadyFulfilled",
-      "msg": "Job already fulfilled"
-    },
-    {
-      "code": 6006,
-      "name": "ResultAlreadyFinalized",
-      "msg": "Result already finalized"
-    },
-    {
-      "code": 6007,
-      "name": "RewardAlreadyMinted",
-      "msg": "Reward already minted"
-    },
-    {
-      "code": 6008,
-      "name": "ResultNotConfirmed",
-      "msg": "Result is not yet confirmed \u2014 cannot mint reward."
-    },
-    {
-      "code": 6009,
-      "name": "WeekNotClosed",
-      "msg": "Week not yet closed"
-    },
-    {
-      "code": 6010,
-      "name": "NotLeader",
-      "msg": "Not the weekly leader"
-    },
-    {
-      "code": 6011,
-      "name": "BonusAlreadyMinted",
-      "msg": "Bonus already minted"
-    },
-    {
-      "code": 6012,
-      "name": "EpochNotReady",
-      "msg": "Epoch not ready to advance"
     }
   ]
-}
+};
