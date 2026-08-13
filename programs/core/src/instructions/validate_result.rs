@@ -91,6 +91,16 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
             .confirmed_count
             .checked_add(1)
             .ok_or(LifeError::Overflow)?;
+
+        // Track confirming validators so mint_reward can split the 5% commission.
+        let cidx = result.confirming_validator_count as usize;
+        if cidx < MAX_VALIDATORS_PER_RESULT {
+            result.confirming_validator_list[cidx] = validator_key;
+            result.confirming_validator_count = result
+                .confirming_validator_count
+                .checked_add(1)
+                .ok_or(LifeError::Overflow)?;
+        }
     }
 
     let validation_count = result.validation_count;

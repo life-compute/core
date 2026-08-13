@@ -38,7 +38,7 @@ pub struct ResultSubmission {
     /// Running sum of rescored affinities (for averaging after finalization).
     pub validation_score_sum: f32,
 
-    /// Pubkeys of validators who have already voted (duplicate-vote guard).
+    /// Pubkeys of ALL validators who have voted (duplicate-vote guard).
     pub validator_list: [Pubkey; 5], // MAX_VALIDATORS_PER_RESULT
 
     /// Set to true once mint_reward has been called successfully.
@@ -48,26 +48,35 @@ pub struct ResultSubmission {
     /// Finalization requires confirmed_count >= NetworkConfig.validators_required.
     pub confirmed_count: u8,
 
+    /// Pubkeys of validators who voted IS_CONFIRMED.
+    /// Populated in validate_result; read by mint_reward to split the 5% commission.
+    pub confirming_validator_list: [Pubkey; 5], // MAX_VALIDATORS_PER_RESULT
+
+    /// Number of entries in confirming_validator_list.
+    pub confirming_validator_count: u8,
+
     pub bump: u8,
 }
 
 impl ResultSubmission {
-    pub const LEN: usize = 8
-        + 32            // miner
-        + 1             // target_id
-        + 8             // epoch
-        + 512           // smiles bytes
-        + 2             // smiles_len
-        + 4             // claimed_affinity (f32)
-        + 8             // submitted_slot
-        + 1             // status (enum)
-        + 1             // validation_count
-        + 4             // validation_score_sum (f32)
-        + 32 * MAX_VALIDATORS_PER_RESULT // validator_list
-        + 1             // reward_minted
-        + 1             // confirmed_count
-        + 1             // bump
-        + 31;           // padding (was 32; 1 byte consumed by confirmed_count)
+    pub const LEN: usize = 8          // anchor discriminator
+        + 32                          // miner
+        + 1                           // target_id
+        + 8                           // epoch
+        + 512                         // smiles bytes
+        + 2                           // smiles_len
+        + 4                           // claimed_affinity (f32)
+        + 8                           // submitted_slot
+        + 1                           // status (enum)
+        + 1                           // validation_count
+        + 4                           // validation_score_sum (f32)
+        + 32 * MAX_VALIDATORS_PER_RESULT // validator_list (all voters)
+        + 1                           // reward_minted
+        + 1                           // confirmed_count
+        + 32 * MAX_VALIDATORS_PER_RESULT // confirming_validator_list
+        + 1                           // confirming_validator_count
+        + 1                           // bump
+        + 32;                         // padding for future fields
 
     /// Return the SMILES as a &str slice (lossy if non-UTF8, but SMILES is ASCII).
     pub fn smiles_str(&self) -> &str {

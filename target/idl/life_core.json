@@ -426,6 +426,65 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "updateValidators",
+      "discriminator": [
+        211,
+        66,
+        122,
+        122,
+        121,
+        107,
+        148,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": false,
+          "signer": true
+        },
+        {
+          "name": "networkConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  101,
+                  116,
+                  119,
+                  111,
+                  114,
+                  107,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "newValidators",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "validatorsRequired",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [

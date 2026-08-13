@@ -45,10 +45,19 @@ pub struct NetworkConfig {
 
     /// Mint authority PDA bump (separate PDA: [SEED_LIFE_MINT]).
     pub mint_authority_bump: u8,
+
+    /// Total miners that have ever registered (monotonically increasing).
+    /// Used to gate the free-registration period (first FREE_MINER_SLOTS are free).
+    pub total_miners_registered: u64,
+
+    /// Total validators that have ever self-registered via register_validator.
+    pub total_validators_registered: u64,
 }
 
 impl NetworkConfig {
     /// Discriminator (8) + fields.
+    /// The two new u64 counters (16 bytes) fit inside the original 64-byte padding,
+    /// so the on-chain account size does NOT change — no realloc needed.
     pub const LEN: usize = 8
         + 32  // authority
         + 32  // life_mint
@@ -63,7 +72,9 @@ impl NetworkConfig {
         + 1   // validator_count
         + 1   // bump
         + 1   // mint_authority_bump
-        + 64; // padding for future fields
+        + 8   // total_miners_registered
+        + 8   // total_validators_registered
+        + 48; // padding for future fields (was 64; 16 consumed by new counters)
 
     /// Returns the current week number derived from slot-based epoch arithmetic.
     pub fn current_week(&self) -> u64 {

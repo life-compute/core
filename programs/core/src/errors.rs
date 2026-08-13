@@ -73,6 +73,13 @@ pub enum LifeError {
     #[msg("Result is not yet confirmed — cannot mint reward")]
     ResultNotConfirmed,
 
+    // ─── Validator registration ───────────────────────────────────────────────
+    #[msg("Validator is already registered in the validator set")]
+    ValidatorAlreadyRegistered,
+
+    #[msg("Validator registry is full — maximum 5 validator slots")]
+    ValidatorRegistryFull,
+
     // ─── Reward ──────────────────────────────────────────────────────────────
     #[msg("Reward for this result has already been minted")]
     RewardAlreadyMinted,

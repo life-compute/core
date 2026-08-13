@@ -102,3 +102,19 @@ pub struct EpochAdvanced {
     pub new_epoch: u64,
     pub slot: i64,
 }
+
+/// Emitted when a validator pays the 0.1 SOL fee and joins the validator set.
+#[event]
+pub struct ValidatorRegistered {
+    pub validator: Pubkey,
+    pub slot: i64,
+}
+
+/// Emitted once per confirming validator each time mint_reward distributes commission.
+#[event]
+pub struct ValidatorCommissionMinted {
+    pub validator: Pubkey,
+    pub result_pda: Pubkey,
+    pub amount_raw: u64,
+    pub slot: i64,
+}

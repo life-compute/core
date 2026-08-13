@@ -1,4 +1,5 @@
 // ─── LIFE Compute — constants ─────────────────────────────────────────────
+use anchor_lang::prelude::Pubkey;
 
 /// SPL token decimals.  "1 LIFE" = 1_000_000 raw units.
 pub const LIFE_DECIMALS: u8 = 6;
@@ -24,9 +25,9 @@ pub const VALIDATION_TOLERANCE: f32 = 0.05;
 
 // ─── Reward amounts (raw token units at 6 decimals) ───────────────────────
 
-pub const REWARD_EASY: u64 = ONE_LIFE;           //   1 LIFE
-pub const REWARD_MEDIUM: u64 = 5 * ONE_LIFE;     //   5 LIFE
-pub const REWARD_HARD: u64 = 25 * ONE_LIFE;      //  25 LIFE
+pub const REWARD_EASY: u64 = ONE_LIFE;            //   1 LIFE
+pub const REWARD_MEDIUM: u64 = 5 * ONE_LIFE;      //   5 LIFE
+pub const REWARD_HARD: u64 = 25 * ONE_LIFE;       //  25 LIFE
 pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE; // 100 LIFE
 
 // ─── Max sizes ────────────────────────────────────────────────────────────
@@ -80,3 +81,22 @@ pub const HALVING_HIT_TIER_2: u64 = 1_000;
 /// Minimum SOL locked in the MinerAccount PDA on registration (anti-Sybil stake).
 /// 0.01 SOL = 10_000_000 lamports.  Recovered only if a close-account ix is added.
 pub const REGISTRATION_STAKE: u64 = 10_000_000;
+
+/// First N miners register for free; miner N+1 onwards pays MINER_REGISTRATION_FEE.
+pub const FREE_MINER_SLOTS: u64 = 20;
+
+/// Fee paid by miner #21+ directly to the foundation wallet (0.033 SOL ≈ $5).
+/// This is on top of the REGISTRATION_STAKE which goes into the miner's PDA.
+pub const MINER_REGISTRATION_FEE: u64 = 33_000_000; // lamports
+
+/// Fee paid by every validator on self-registration (0.1 SOL), sent directly to
+/// the foundation wallet.
+pub const VALIDATOR_REGISTRATION_FEE: u64 = 100_000_000; // lamports
+
+/// Foundation wallet — direct recipient for all registration fees.
+/// No treasury PDA; SOL goes straight here.
+/// Address: 2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb
+pub const FOUNDATION_WALLET: Pubkey = Pubkey::new_from_array([
+    25, 190, 115, 16, 56, 60, 32, 33, 150, 48, 115, 24, 20, 52, 120, 37,
+    90, 48, 193, 57, 78, 91, 108, 23, 56, 249, 224, 237, 226, 242, 177, 168,
+]);

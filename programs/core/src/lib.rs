@@ -41,7 +41,7 @@ pub mod state;
 use instructions::*;
 use state::DifficultyTier;
 
-declare_id!("5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p");
+declare_id!("DzcQHhTPuiqxCxZurDbEAaV1U2JBFXWy6JG1LE6WsKvJ");
 
 #[program]
 pub mod life_core {
@@ -116,7 +116,7 @@ pub mod life_core {
     // ── Rewards ───────────────────────────────────────────────────────────────
 
     /// Permissionless crank: mint base $LIFE reward once result is Confirmed.
-    pub fn mint_reward(ctx: Context<MintReward>) -> Result<()> {
+    pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) -> Result<()> {
         instructions::mint_reward::mint_reward(ctx)
     }
 
@@ -131,5 +131,19 @@ pub mod life_core {
     /// Permissionless crank: advance epoch once 216,000 slots have elapsed (~24h).
     pub fn advance_epoch(ctx: Context<AdvanceEpoch>) -> Result<()> {
         instructions::advance_epoch::advance_epoch(ctx)
+    }
+
+    pub fn update_validators(
+        ctx: Context<UpdateValidators>,
+        new_validators: Vec<Pubkey>,
+        validators_required: u8,
+    ) -> Result<()> {
+        instructions::update_validators::update_validators(ctx, new_validators, validators_required)
+    }
+
+    /// Permissionless: pay 0.1 SOL to the foundation and join the validator set.
+    /// Increments total_validators_registered in NetworkConfig.
+    pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
+        instructions::register_validator::register_validator(ctx)
     }
 }
