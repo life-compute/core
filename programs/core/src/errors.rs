@@ -83,6 +83,15 @@ pub enum LifeError {
     #[msg("Validator registry is full — maximum 5 validator slots")]
     ValidatorRegistryFull,
 
+    #[msg("Validator has not yet cast enough votes to be evaluated for eviction (min 10)")]
+    InsufficientValidationHistory,
+
+    #[msg("Validator reputation is at or above the eviction threshold (>=50%)")]
+    ReputationAboveThreshold,
+
+    #[msg("Validator is not in the active validator set")]
+    ValidatorNotFound,
+
     // ─── Reward ──────────────────────────────────────────────────────────────
     #[msg("Reward for this result has already been minted")]
     RewardAlreadyMinted,

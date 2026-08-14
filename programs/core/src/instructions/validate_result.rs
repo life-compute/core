@@ -3,8 +3,8 @@ use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::{LeaderboardUpdated, ResultFinalized, ValidationCast};
 use crate::state::{
-    NetworkConfig, ResultStatus, ResultSubmission, TargetAccount, ValidationRecord,
-    WeeklyLeaderboard,
+    NetworkConfig, ResultStatus, ResultSubmission, TargetAccount, ValidatorAccount,
+    ValidationRecord, WeeklyLeaderboard,
 };
 
 /// A registered validator re-runs Boltz2 and posts their rescored affinity.
@@ -68,6 +68,24 @@ pub fn validate_result(ctx: Context<ValidateResult>, rescored_affinity: f32) -> 
     record.is_confirmed = is_confirmed;
     record.validated_slot = clock.slot as i64;
     record.bump = ctx.bumps.validation_record;
+
+    // ── Update validator reputation ──────────────────────────────────────────
+    {
+        let va = &mut ctx.accounts.validator_account;
+        if va.validator == Pubkey::default() {
+            // First-time init (init_if_needed)
+            va.validator = validator_key;
+            va.bump = ctx.bumps.validator_account;
+            va.reputation_bps = 10_000; // new validators start fully trusted
+            va.is_active = true;
+        }
+        va.total_validations = va.total_validations.saturating_add(1);
+        if is_confirmed {
+            va.confirmations = va.confirmations.saturating_add(1);
+        }
+        va.recompute_reputation();
+        va.last_active_slot = clock.slot as i64;
+    }
 
     // Accumulate vote
     let result = &mut ctx.accounts.result_submission;
@@ -248,6 +266,16 @@ pub struct ValidateResult<'info> {
         bump,
     )]
     pub weekly_leaderboard: Box<Account<'info, WeeklyLeaderboard>>,
+
+    /// Validator's reputation account — created on first validation, updated on each.
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = ValidatorAccount::LEN,
+        seeds = [SEED_VALIDATOR_ACCOUNT, validator.key().as_ref()],
+        bump,
+    )]
+    pub validator_account: Box<Account<'info, ValidatorAccount>>,
 
     pub system_program: Program<'info, System>,
 }

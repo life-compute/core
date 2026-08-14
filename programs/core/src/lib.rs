@@ -132,6 +132,12 @@ pub mod life_core {
         instructions::advance_epoch::advance_epoch(ctx)
     }
 
+    /// Authority removes a validator whose reputation has fallen below 50%.
+    /// Requires >= 10 historical validations (protects new validators).
+    pub fn evict_validator(ctx: Context<EvictValidator>) -> Result<()> {
+        instructions::evict_validator::evict_validator(ctx)
+    }
+
     pub fn update_validators(
         ctx: Context<UpdateValidators>,
         new_validators: Vec<Pubkey>,

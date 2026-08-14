@@ -60,6 +60,7 @@ pub const SEED_MINER: &[u8] = b"miner";
 pub const SEED_JOB: &[u8] = b"job";
 pub const SEED_RESULT: &[u8] = b"result";
 pub const SEED_VALIDATION: &[u8] = b"validation";
+pub const SEED_VALIDATOR_ACCOUNT: &[u8] = b"validator_account";
 pub const SEED_LEADERBOARD: &[u8] = b"leaderboard";
 
 // ─── Slots per week (~7 days at 400 ms/slot) ──────────────────────────────

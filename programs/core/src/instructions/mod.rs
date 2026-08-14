@@ -8,6 +8,7 @@ pub mod validate_result;
 pub mod mint_reward;
 pub mod claim_discovery_bonus;
 pub mod advance_epoch;
+pub mod evict_validator;
 pub mod update_validators;
 
 pub use initialize::*;
@@ -20,4 +21,5 @@ pub use validate_result::*;
 pub use mint_reward::*;
 pub use claim_discovery_bonus::*;
 pub use advance_epoch::*;
+pub use evict_validator::*;
 pub use update_validators::*;
