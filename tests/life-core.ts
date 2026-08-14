@@ -17,8 +17,12 @@ import { assert } from "chai";
 // ─── Constants mirrored from Rust ──────────────────────────────────────────
 const ONE_LIFE = new BN(1_000_000);
 const SUPPLY_CAP = ONE_LIFE.muln(21_000_000);
-const EPOCH_SLOTS = new BN(216_000);
-const FOUNDATION_WALLET = new PublicKey("2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb");
+// Mainnet: 216_000 slots (~24 h). Devnet: 1_000 slots (~6 min) for rapid testing.
+const IS_DEVNET = (process.env.ANCHOR_PROVIDER_URL ?? "").includes("devnet");
+const EPOCH_SLOTS = new BN(IS_DEVNET ? 1_000 : 216_000);
+const FOUNDATION_WALLET = new PublicKey(
+  "2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb"
+);
 const VALIDATORS_REQUIRED = 2;
 const VALIDATION_TOLERANCE = 0.05;
 
@@ -40,6 +44,17 @@ function epochBytes(epoch: BN): Buffer {
 function weekBytes(week: BN): Buffer {
   const b = Buffer.alloc(8);
   b.writeBigUInt64LE(BigInt(week.toString()));
+  return b;
+}
+
+/** Encode a u16 target_id as a 2-byte little-endian Buffer.
+ *  Rust derives TargetAccount + WeeklyLeaderboard PDAs with
+ *  `&target_id.to_le_bytes()` where target_id: u16.
+ *  MUST use 2-byte LE — not Buffer.from([id]) which is 1-byte.
+ */
+function targetIdBytes(id: number): Buffer {
+  const b = Buffer.alloc(2);
+  b.writeUInt16LE(id);
   return b;
 }
 
@@ -165,7 +180,7 @@ describe("life_core", () => {
 
   it("registers TP53 as a Hard target", async () => {
     [targetPda] = PublicKey.findProgramAddressSync(
-      [SEED_TARGET, Buffer.from([TARGET_ID])],
+      [SEED_TARGET, targetIdBytes(TARGET_ID)],
       program.programId
     );
 
@@ -372,7 +387,7 @@ describe("life_core", () => {
 
     const currentWeek = config.currentEpoch.divn(7);
     [leaderboardPda] = PublicKey.findProgramAddressSync(
-      [SEED_LEADERBOARD, weekBytes(currentWeek), Buffer.from([TARGET_ID])],
+      [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
       program.programId
     );
 
@@ -417,7 +432,7 @@ describe("life_core", () => {
 
     const currentWeek = config.currentEpoch.divn(7);
     [leaderboardPda] = PublicKey.findProgramAddressSync(
-      [SEED_LEADERBOARD, weekBytes(currentWeek), Buffer.from([TARGET_ID])],
+      [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
       program.programId
     );
 
@@ -633,7 +648,7 @@ describe("life_core", () => {
     const config = await program.account.networkConfig.fetch(networkConfigPda);
     const currentWeek = config.currentEpoch.divn(7);
     const [lbPda] = PublicKey.findProgramAddressSync(
-      [SEED_LEADERBOARD, weekBytes(currentWeek), Buffer.from([TARGET_ID])],
+      [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
       program.programId
     );
     const [validationPdaRando] = PublicKey.findProgramAddressSync(
@@ -670,7 +685,7 @@ describe("life_core", () => {
     const config = await program.account.networkConfig.fetch(networkConfigPda);
     const currentWeek = config.currentEpoch.divn(7);
     const [lbPda] = PublicKey.findProgramAddressSync(
-      [SEED_LEADERBOARD, weekBytes(currentWeek), Buffer.from([TARGET_ID])],
+      [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
       program.programId
     );
 

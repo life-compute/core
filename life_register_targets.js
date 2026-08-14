@@ -88,7 +88,11 @@ function uniprotBytes(s) {
 
   for (const tgt of targets) {
     const targetId = tgt.id;
-    const [targetPda] = PublicKey.findProgramAddressSync([SEED_TARGET, Buffer.from([targetId])], PROG_ID);
+    // target_id is u16 in Rust → seeds use 2-byte little-endian (target_id.to_le_bytes()).
+    // Buffer.from([targetId]) is 1-byte (u8) — seeds mismatch → ConstraintSeeds error.
+    const targetIdBuf = Buffer.alloc(2);
+    targetIdBuf.writeUInt16LE(targetId);
+    const [targetPda] = PublicKey.findProgramAddressSync([SEED_TARGET, targetIdBuf], PROG_ID);
 
     // Check if already exists
     const existing = await conn.getAccountInfo(targetPda);
