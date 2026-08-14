@@ -145,7 +145,10 @@ function log(...args) {
   const jobInfo = await conn.getAccountInfo(jobPda);
   log('jobAssignment on-chain:', jobInfo !== null ? 'YES' : 'NO (will assign)');
   if (jobInfo === null) {
-    const [tgt] = PublicKey.findProgramAddressSync([SEED_TARGET, Buffer.from([TARGET_ID_NUM])], PROG_ID);
+    // target_id is u16 in Rust → seeds use 2-byte little-endian (target_id.to_le_bytes())
+    const targetIdBuf = Buffer.alloc(2);
+    targetIdBuf.writeUInt16LE(TARGET_ID_NUM);
+    const [tgt] = PublicKey.findProgramAddressSync([SEED_TARGET, targetIdBuf], PROG_ID);
     log('target PDA for id', TARGET_ID_NUM, ':', tgt.toBase58());
     const tgtInfo = await conn.getAccountInfo(tgt);
     log('target PDA on-chain:', tgtInfo !== null ? `YES (${tgtInfo.data.length} bytes)` : 'NO (target not registered!)');
