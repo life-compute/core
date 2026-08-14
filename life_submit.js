@@ -65,9 +65,14 @@ function log(...args) {
   }
 
   const TARGET_ID_NUM = args.targetIdNum;
+  // seq: which submission slot to use (0, 1, or 2 per epoch).
+  // Caller may pass args.seq; default to 0 for first submission.
+  const SEQ = (typeof args.seq === 'number') ? args.seq : 0;
+  log('seq:', SEQ);
+
   const [minerAccountPda] = PublicKey.findProgramAddressSync([SEED_MINER, minerKp.publicKey.toBuffer()], PROG_ID);
-  const [jobPda]          = PublicKey.findProgramAddressSync([SEED_JOB, epochBytes(epoch), minerKp.publicKey.toBuffer()], PROG_ID);
-  const [resultPda]       = PublicKey.findProgramAddressSync([SEED_RESULT, epochBytes(epoch), minerKp.publicKey.toBuffer()], PROG_ID);
+  const [jobPda]          = PublicKey.findProgramAddressSync([SEED_JOB, epochBytes(epoch), minerKp.publicKey.toBuffer(), Buffer.from([SEQ])], PROG_ID);
+  const [resultPda]       = PublicKey.findProgramAddressSync([SEED_RESULT, epochBytes(epoch), minerKp.publicKey.toBuffer(), Buffer.from([SEQ])], PROG_ID);
   log('minerAccount PDA:', minerAccountPda.toBase58());
   log('jobAssignment PDA:', jobPda.toBase58());
   log('resultSubmission PDA:', resultPda.toBase58());
@@ -104,6 +109,20 @@ function log(...args) {
   // ── Register miner if needed ──────────────────────────────────────────────
   const minerInfo = await conn.getAccountInfo(minerAccountPda);
   log('minerAccount on-chain:', minerInfo !== null ? 'YES' : 'NO (will register)');
+  if (minerInfo !== null) {
+    // Log rate-limit fields from the upgraded MinerAccount
+    try {
+      const ma = await program.account.minerAccount.fetch(minerAccountPda);
+      const submissionCount = ma.submissionCount ?? ma.submission_count ?? 0;
+      const submissionEpoch = ma.submissionEpoch ?? ma.submission_epoch ?? 0;
+      log('minerAccount submissionCount:', submissionCount, '| submissionEpoch:', submissionEpoch.toString(), '| currentEpoch:', epoch.toString());
+      if (submissionEpoch.toString() === epoch.toString() && submissionCount >= 3) {
+        log('WARN: submission rate limit reached for this epoch (count=' + submissionCount + ')');
+      }
+    } catch (maErr) {
+      log('WARN: could not decode minerAccount details:', maErr.message);
+    }
+  }
   if (minerInfo === null) {
     try {
       const t = await program.methods.registerMiner()
@@ -131,7 +150,7 @@ function log(...args) {
     const tgtInfo = await conn.getAccountInfo(tgt);
     log('target PDA on-chain:', tgtInfo !== null ? `YES (${tgtInfo.data.length} bytes)` : 'NO (target not registered!)');
     try {
-      const t = await program.methods.assignJob(TARGET_ID_NUM)
+      const t = await program.methods.assignJob(TARGET_ID_NUM, SEQ)
         .accounts({
           crank: authKp.publicKey,
           networkConfig: networkConfigPda,
