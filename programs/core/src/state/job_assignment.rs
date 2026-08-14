@@ -5,7 +5,10 @@ use anchor_lang::prelude::*;
 #[account]
 pub struct JobAssignment {
     pub miner: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
+    /// Submission sequence within the epoch (0, 1, 2).
+    /// Allows up to MAX_SUBMISSIONS_PER_EPOCH distinct job + result PDAs.
+    pub seq: u8,
     pub epoch: u64,
 
     /// Slot at which the job was assigned.
@@ -20,10 +23,11 @@ pub struct JobAssignment {
 impl JobAssignment {
     pub const LEN: usize = 8
         + 32 // miner
-        + 1  // target_id
+        + 2  // target_id (u16)
+        + 1  // seq
         + 8  // epoch
         + 8  // assigned_slot
         + 1  // is_fulfilled
         + 1  // bump
-        + 16; // padding
+        + 15; // padding (was 16; 1 byte consumed by seq)
 }

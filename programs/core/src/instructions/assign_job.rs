@@ -2,14 +2,12 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::JobAssigned;
-use crate::state::{NetworkConfig, TargetAccount, MinerAccount, JobAssignment};
+use crate::state::{JobAssignment, MinerAccount, NetworkConfig, TargetAccount};
 
 /// Assigns a cancer target to a miner for the current epoch.
-/// Called by the authority or a validator-set crank.
-pub fn assign_job(
-    ctx: Context<AssignJob>,
-    target_id: u8,
-) -> Result<()> {
+/// A miner may receive up to MAX_SUBMISSIONS_PER_EPOCH assignments per epoch.
+/// Called by the authority or a registered validator crank.
+pub fn assign_job(ctx: Context<AssignJob>, target_id: u16, seq: u8) -> Result<()> {
     let config = &ctx.accounts.network_config;
     let target = &ctx.accounts.target;
     let miner_account = &mut ctx.accounts.miner_account;
@@ -17,12 +15,14 @@ pub fn assign_job(
 
     require!(target.is_active, LifeError::TargetInactive);
     require!(target.target_id == target_id, LifeError::InvalidTargetId);
+    require!(seq < MAX_SUBMISSIONS_PER_EPOCH, LifeError::SubmissionLimitExceeded);
 
     let epoch = config.current_epoch;
     let clock = Clock::get()?;
 
     job.miner = ctx.accounts.miner.key();
     job.target_id = target_id;
+    job.seq = seq;
     job.epoch = epoch;
     job.assigned_slot = clock.slot as i64;
     job.is_fulfilled = false;
@@ -41,7 +41,7 @@ pub fn assign_job(
 }
 
 #[derive(Accounts)]
-#[instruction(target_id: u8)]
+#[instruction(target_id: u16, seq: u8)]
 pub struct AssignJob<'info> {
     /// Authority or validator calling the crank.
     #[account(mut)]
@@ -50,7 +50,6 @@ pub struct AssignJob<'info> {
     #[account(
         seeds = [SEED_NETWORK_CONFIG],
         bump = network_config.bump,
-        // authority OR registered validator may assign jobs
         constraint = (
             network_config.authority == crank.key() ||
             network_config.is_validator(&crank.key())
@@ -59,7 +58,7 @@ pub struct AssignJob<'info> {
     pub network_config: Account<'info, NetworkConfig>,
 
     #[account(
-        seeds = [SEED_TARGET, &[target_id]],
+        seeds = [SEED_TARGET, &target_id.to_le_bytes()],
         bump = target.bump,
     )]
     pub target: Account<'info, TargetAccount>,
@@ -83,6 +82,7 @@ pub struct AssignJob<'info> {
             SEED_JOB,
             &network_config.current_epoch.to_le_bytes(),
             miner.key().as_ref(),
+            &[seq],
         ],
         bump,
     )]

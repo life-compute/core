@@ -12,7 +12,7 @@ pub struct MinerRegistered {
 
 #[event]
 pub struct TargetRegistered {
-    pub target_id: u8,
+    pub target_id: u16,
     /// Null-padded UniProt accession bytes, e.g. b"P04637\0\0\0\0"
     pub uniprot_id: [u8; 10],
     pub difficulty: u8, // 0=Easy, 1=Medium, 2=Hard
@@ -21,7 +21,7 @@ pub struct TargetRegistered {
 #[event]
 pub struct JobAssigned {
     pub miner: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
     pub epoch: u64,
     pub slot: i64,
 }
@@ -29,7 +29,7 @@ pub struct JobAssigned {
 #[event]
 pub struct ResultSubmitted {
     pub miner: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
     pub epoch: u64,
     /// SMILES string of the best candidate molecule.
     pub smiles: String,
@@ -52,7 +52,7 @@ pub struct ValidationCast {
 pub struct ResultFinalized {
     pub miner: Pubkey,
     pub result_pda: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
     /// 0=Confirmed, 1=Rejected
     pub status: u8,
     /// Average of all validator rescored affinities.
@@ -64,7 +64,7 @@ pub struct ResultFinalized {
 pub struct RewardMinted {
     pub miner: Pubkey,
     pub result_pda: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
     /// Base reward for this difficulty tier (before halving).
     pub base_reward_raw: u64,
     /// Final reward after both halving layers applied (raw units).
@@ -80,7 +80,7 @@ pub struct RewardMinted {
 #[event]
 pub struct LeaderboardUpdated {
     pub week: u64,
-    pub target_id: u8,
+    pub target_id: u16,
     pub new_leader: Pubkey,
     pub new_score: f32,
     pub prior_score: f32,
@@ -90,7 +90,7 @@ pub struct LeaderboardUpdated {
 pub struct DiscoveryBonusMinted {
     pub miner: Pubkey,
     pub week: u64,
-    pub target_id: u8,
+    pub target_id: u16,
     pub amount_raw: u64,
     pub total_minted_after: u64,
     pub slot: i64,

@@ -33,6 +33,9 @@ pub enum LifeError {
     #[msg("Miner is already registered")]
     MinerAlreadyRegistered,
 
+    #[msg("Miner has reached the maximum submissions allowed per epoch (3)")]
+    SubmissionLimitExceeded,
+
     // ─── Job assignment ──────────────────────────────────────────────────────
     #[msg("A job has already been assigned to this miner for the current epoch")]
     JobAlreadyAssigned,

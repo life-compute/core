@@ -41,7 +41,7 @@ pub mod state;
 use instructions::*;
 use state::DifficultyTier;
 
-declare_id!("DzcQHhTPuiqxCxZurDbEAaV1U2JBFXWy6JG1LE6WsKvJ");
+declare_id!("74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf");
 
 #[program]
 pub mod life_core {
@@ -71,11 +71,10 @@ pub mod life_core {
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
-    /// Register one of the 10 initial cancer protein targets.
-    /// `target_id` must be 0–9. Authority-only.
+        /// Register a cancer protein target (up to MAX_TARGETS=2000). Authority-only.
     pub fn register_target(
         ctx: Context<RegisterTarget>,
-        target_id: u8,
+        target_id: u16,
         uniprot_id: [u8; 10],
         difficulty: DifficultyTier,
     ) -> Result<()> {
@@ -91,8 +90,8 @@ pub mod life_core {
 
     /// Crank: assign a cancer target to a miner for the current epoch.
     /// Caller must be authority or a registered validator.
-    pub fn assign_job(ctx: Context<AssignJob>, target_id: u8) -> Result<()> {
-        instructions::assign_job::assign_job(ctx, target_id)
+    pub fn assign_job(ctx: Context<AssignJob>, target_id: u16, seq: u8) -> Result<()> {
+        instructions::assign_job::assign_job(ctx, target_id, seq)
     }
 
     /// Miner submits their best candidate molecule (SMILES + Boltz2 score).

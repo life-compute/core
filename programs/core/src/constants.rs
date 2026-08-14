@@ -10,8 +10,12 @@ pub const ONE_LIFE: u64 = 1_000_000;
 /// Fixed supply cap: 21,000,000 LIFE (raw units).
 pub const SUPPLY_CAP_RAW: u64 = 21_000_000 * ONE_LIFE;
 
-/// Epoch length in slots (~24 h at 400 ms/slot).
+/// Epoch length in slots (~24 h at 400 ms/slot) — mainnet default.
 pub const EPOCH_DURATION_SLOTS: u64 = 216_000;
+
+/// Epoch length in slots for devnet testing (~6 min at 400 ms/slot).
+/// Allows multiple submissions per hour when verifying the full pipeline.
+pub const DEVNET_EPOCH_DURATION_SLOTS: u64 = 1_000;
 
 /// Minimum validators required to confirm a result.
 pub const VALIDATORS_REQUIRED: u8 = 2;
@@ -33,7 +37,13 @@ pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE; // 100 LIFE
 // ─── Max sizes ────────────────────────────────────────────────────────────
 
 /// Maximum number of registered cancer targets.
-pub const MAX_TARGETS: u8 = 30;
+/// Maximum number of registered cancer targets.
+/// target_id is u16 so this can safely reach 2000.
+pub const MAX_TARGETS: u16 = 2000;
+
+/// Maximum submissions a single miner may make per epoch.
+/// Allows up to 3 bites at the apple per 24-hour epoch.
+pub const MAX_SUBMISSIONS_PER_EPOCH: u8 = 3;
 
 /// SMILES string character limit (covers 99%+ of known drugs).
 pub const MAX_SMILES_LEN: usize = 512;

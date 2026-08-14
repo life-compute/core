@@ -1,5 +1,5 @@
 {
-  "address": "DzcQHhTPuiqxCxZurDbEAaV1U2JBFXWy6JG1LE6WsKvJ",
+  "address": "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf",
   "metadata": {
     "name": "life_core",
     "version": "0.1.0",
@@ -103,7 +103,7 @@
       "args": [
         {
           "name": "target_id",
-          "type": "u8"
+          "type": "u16"
         },
         {
           "name": "uniprot_id",
@@ -234,7 +234,7 @@
       "args": [
         {
           "name": "target_id",
-          "type": "u8"
+          "type": "u16"
         }
       ]
     },
@@ -482,7 +482,6 @@
       "accounts": [
         {
           "name": "authority",
-          "writable": false,
           "signer": true
         },
         {
@@ -620,6 +619,73 @@
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
+      "name": "NotAValidator",
+      "msg": "Signer is not a registered validator."
+    },
+    {
+      "code": 6002,
+      "name": "SupplyCapExceeded",
+      "msg": "Supply cap exceeded"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAffinityScore",
+      "msg": "Affinity score must be negative"
+    },
+    {
+      "code": 6004,
+      "name": "TargetInactive",
+      "msg": "Target is not active"
+    },
+    {
+      "code": 6005,
+      "name": "JobAlreadyFulfilled",
+      "msg": "Job already fulfilled"
+    },
+    {
+      "code": 6006,
+      "name": "ResultAlreadyFinalized",
+      "msg": "Result already finalized"
+    },
+    {
+      "code": 6007,
+      "name": "RewardAlreadyMinted",
+      "msg": "Reward already minted"
+    },
+    {
+      "code": 6008,
+      "name": "ResultNotConfirmed",
+      "msg": "Result is not yet confirmed \u2014 cannot mint reward."
+    },
+    {
+      "code": 6009,
+      "name": "WeekNotClosed",
+      "msg": "Week not yet closed"
+    },
+    {
+      "code": 6010,
+      "name": "NotLeader",
+      "msg": "Not the weekly leader"
+    },
+    {
+      "code": 6011,
+      "name": "BonusAlreadyMinted",
+      "msg": "Bonus already minted"
+    },
+    {
+      "code": 6012,
+      "name": "EpochNotReady",
+      "msg": "Epoch not ready to advance"
+    }
+  ],
   "types": [
     {
       "name": "NetworkConfig",
@@ -693,7 +759,7 @@
         "fields": [
           {
             "name": "target_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "uniprot_id",
@@ -782,7 +848,7 @@
           },
           {
             "name": "target_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "epoch",
@@ -814,7 +880,7 @@
           },
           {
             "name": "target_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "epoch",
@@ -924,7 +990,7 @@
           },
           {
             "name": "target_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "leader_miner",
@@ -981,73 +1047,6 @@
           }
         ]
       }
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "Unauthorized",
-      "msg": "Unauthorized"
-    },
-    {
-      "code": 6001,
-      "name": "NotAValidator",
-      "msg": "Signer is not a registered validator."
-    },
-    {
-      "code": 6002,
-      "name": "SupplyCapExceeded",
-      "msg": "Supply cap exceeded"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidAffinityScore",
-      "msg": "Affinity score must be negative"
-    },
-    {
-      "code": 6004,
-      "name": "TargetInactive",
-      "msg": "Target is not active"
-    },
-    {
-      "code": 6005,
-      "name": "JobAlreadyFulfilled",
-      "msg": "Job already fulfilled"
-    },
-    {
-      "code": 6006,
-      "name": "ResultAlreadyFinalized",
-      "msg": "Result already finalized"
-    },
-    {
-      "code": 6007,
-      "name": "RewardAlreadyMinted",
-      "msg": "Reward already minted"
-    },
-    {
-      "code": 6008,
-      "name": "ResultNotConfirmed",
-      "msg": "Result is not yet confirmed \u2014 cannot mint reward."
-    },
-    {
-      "code": 6009,
-      "name": "WeekNotClosed",
-      "msg": "Week not yet closed"
-    },
-    {
-      "code": 6010,
-      "name": "NotLeader",
-      "msg": "Not the weekly leader"
-    },
-    {
-      "code": 6011,
-      "name": "BonusAlreadyMinted",
-      "msg": "Bonus already minted"
-    },
-    {
-      "code": 6012,
-      "name": "EpochNotReady",
-      "msg": "Epoch not ready to advance"
     }
   ]
 }

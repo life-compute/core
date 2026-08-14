@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 #[derive(Default)]
 pub struct WeeklyLeaderboard {
     pub week: u64,
-    pub target_id: u8,
+    pub target_id: u16,
 
     /// Pubkey of the miner with the best score this week for this target.
     pub leader_miner: Pubkey,
@@ -24,7 +24,7 @@ pub struct WeeklyLeaderboard {
 impl WeeklyLeaderboard {
     pub const LEN: usize = 8
         + 8  // week
-        + 1  // target_id
+        + 2  // target_id (u16)
         + 32 // leader_miner
         + 4  // leader_score (f32)
         + 1  // bonus_minted

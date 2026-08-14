@@ -202,7 +202,7 @@ pub struct ValidateResult<'info> {
 
     #[account(
         mut,
-        seeds = [SEED_TARGET, &[result_submission.target_id]],
+        seeds = [SEED_TARGET, &result_submission.target_id.to_le_bytes()],
         bump = target.bump,
     )]
     pub target: Box<Account<'info, TargetAccount>>,
@@ -243,7 +243,7 @@ pub struct ValidateResult<'info> {
         seeds = [
             SEED_LEADERBOARD,
             &network_config.current_week().to_le_bytes(),
-            &[result_submission.target_id],
+            &result_submission.target_id.to_le_bytes(),
         ],
         bump,
     )]

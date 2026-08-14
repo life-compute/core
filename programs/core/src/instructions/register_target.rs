@@ -2,12 +2,12 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::TargetRegistered;
-use crate::state::{NetworkConfig, TargetAccount, DifficultyTier};
+use crate::state::{DifficultyTier, NetworkConfig, TargetAccount};
 
 /// Registers a new cancer protein target. Authority-only.
 pub fn register_target(
     ctx: Context<RegisterTarget>,
-    target_id: u8,
+    target_id: u16,
     uniprot_id: [u8; 10],
     difficulty: DifficultyTier,
 ) -> Result<()> {
@@ -34,7 +34,7 @@ pub fn register_target(
 }
 
 #[derive(Accounts)]
-#[instruction(target_id: u8)]
+#[instruction(target_id: u16)]
 pub struct RegisterTarget<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -50,7 +50,7 @@ pub struct RegisterTarget<'info> {
         init,
         payer = authority,
         space = TargetAccount::LEN,
-        seeds = [SEED_TARGET, &[target_id]],
+        seeds = [SEED_TARGET, &target_id.to_le_bytes()],
         bump,
     )]
     pub target: Account<'info, TargetAccount>,

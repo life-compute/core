@@ -15,7 +15,7 @@ pub enum ResultStatus {
 #[account]
 pub struct ResultSubmission {
     pub miner: Pubkey,
-    pub target_id: u8,
+    pub target_id: u16,
     pub epoch: u64,
 
     /// SMILES string of the candidate molecule (max 512 chars, stored as
@@ -61,7 +61,7 @@ pub struct ResultSubmission {
 impl ResultSubmission {
     pub const LEN: usize = 8          // anchor discriminator
         + 32                          // miner
-        + 1                           // target_id
+        + 2                           // target_id (u16)
         + 8                           // epoch
         + 512                         // smiles bytes
         + 2                           // smiles_len

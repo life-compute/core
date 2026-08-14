@@ -201,7 +201,7 @@ pub struct MintReward<'info> {
     pub result_submission: Box<Account<'info, ResultSubmission>>,
 
     #[account(
-        seeds = [SEED_TARGET, &[result_submission.target_id]],
+        seeds = [SEED_TARGET, &result_submission.target_id.to_le_bytes()],
         bump = target.bump,
     )]
     pub target: Account<'info, crate::state::TargetAccount>,

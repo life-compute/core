@@ -2,18 +2,16 @@ use anchor_lang::prelude::*;
 use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::ResultSubmitted;
-use crate::state::{
-    NetworkConfig, MinerAccount, JobAssignment, ResultSubmission, ResultStatus,
-};
+use crate::state::{JobAssignment, MinerAccount, NetworkConfig, ResultStatus, ResultSubmission};
 
 /// Miner submits their best molecule (SMILES + Boltz2 affinity) for the epoch.
+/// Up to MAX_SUBMISSIONS_PER_EPOCH submissions are allowed per miner per epoch.
 pub fn submit_result(
     ctx: Context<SubmitResult>,
     smiles: String,
     claimed_affinity: f32,
 ) -> Result<()> {
     require!(smiles.len() <= MAX_SMILES_LEN, LifeError::SmilesTooLong);
-    // ΔG must be negative: positive values mean no binding predicted
     require!(claimed_affinity < 0.0, LifeError::InvalidAffinityScore);
 
     let config = &ctx.accounts.network_config;
@@ -22,6 +20,19 @@ pub fn submit_result(
     let result = &mut ctx.accounts.result_submission;
 
     let epoch = config.current_epoch;
+
+    // ── Rate-limit: reset counter when entering a new epoch ──────────────────
+    if miner_account.submission_epoch < epoch {
+        miner_account.submission_count = 0;
+        miner_account.submission_epoch = epoch;
+    }
+
+    // ── Enforce per-epoch submission limit ───────────────────────────────────
+    require!(
+        miner_account.submission_count < MAX_SUBMISSIONS_PER_EPOCH,
+        LifeError::SubmissionLimitExceeded
+    );
+
     require!(job.epoch == epoch, LifeError::EpochMismatch);
     require!(!job.is_fulfilled, LifeError::ResultAlreadySubmitted);
 
@@ -47,10 +58,14 @@ pub fn submit_result(
     result.confirmed_count = 0;
     result.bump = ctx.bumps.result_submission;
 
-    // Mark the job as fulfilled (prevents double submission)
+    // Mark the job slot as used
     job.is_fulfilled = true;
 
-    // Increment miner's molecule count
+    // Increment per-epoch submission counter and lifetime molecule count
+    miner_account.submission_count = miner_account
+        .submission_count
+        .checked_add(1)
+        .ok_or(LifeError::Overflow)?;
     miner_account.molecules_screened = miner_account
         .molecules_screened
         .checked_add(1)
@@ -69,6 +84,7 @@ pub fn submit_result(
 }
 
 #[derive(Accounts)]
+#[instruction(smiles: String)]
 pub struct SubmitResult<'info> {
     #[account(mut)]
     pub miner: Signer<'info>,
@@ -91,17 +107,21 @@ pub struct SubmitResult<'info> {
     /// CHECK: owner field on miner_account already enforces this is the miner.
     pub owner: UncheckedAccount<'info>,
 
+    /// The specific job slot (seq 0-2) being fulfilled.
+    /// Seeds include seq so each of the 3 allowed submissions has its own PDA.
     #[account(
         mut,
         seeds = [
             SEED_JOB,
             &network_config.current_epoch.to_le_bytes(),
             miner.key().as_ref(),
+            &[job_assignment.seq],
         ],
         bump = job_assignment.bump,
     )]
     pub job_assignment: Account<'info, JobAssignment>,
 
+    /// One ResultSubmission PDA per (epoch, miner, seq) triple.
     #[account(
         init,
         payer = miner,
@@ -110,6 +130,7 @@ pub struct SubmitResult<'info> {
             SEED_RESULT,
             &network_config.current_epoch.to_le_bytes(),
             miner.key().as_ref(),
+            &[job_assignment.seq],
         ],
         bump,
     )]

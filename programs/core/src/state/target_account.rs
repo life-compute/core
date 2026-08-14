@@ -33,8 +33,8 @@ impl DifficultyTier {
 /// PDA seeds: [SEED_TARGET, &[target_id]]
 #[account]
 pub struct TargetAccount {
-    /// 0-indexed ID (0–9 for the initial 10 targets).
-    pub target_id: u8,
+    /// 0-indexed ID; u16 allows up to 65535 targets (MAX_TARGETS = 2000).
+    pub target_id: u16,
 
     /// UniProt accession, null-padded to 10 bytes (e.g. b"P04637\0\0\0\0").
     pub uniprot_id: [u8; 10],
@@ -63,7 +63,7 @@ pub struct TargetAccount {
 
 impl TargetAccount {
     pub const LEN: usize = 8
-        + 1   // target_id
+        + 2   // target_id (u16)
         + 10  // uniprot_id
         + 1   // difficulty (enum = 1 byte)
         + 1   // is_active
