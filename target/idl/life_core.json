@@ -340,9 +340,7 @@
                 },
                 {
                     "name": "validator_account",
-                    "writable": true,
-                    "isMut": true,
-                    "isSigner": false
+                    "writable": true
                 }
             ],
             "args": [
@@ -974,7 +972,7 @@
                         "name": "confirming_validator_list",
                         "type": {
                             "array": [
-                                "publicKey",
+                                "pubkey",
                                 5
                             ]
                         }
@@ -1098,7 +1096,7 @@
                 "fields": [
                     {
                         "name": "validator",
-                        "type": "publicKey"
+                        "type": "pubkey"
                     },
                     {
                         "name": "total_validations",
