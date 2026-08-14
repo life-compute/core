@@ -17,6 +17,10 @@ pub struct MinerAccount {
     /// Epoch number of the miner's most recent job assignment.
     pub last_epoch: u64,
 
+    pub is_registered: bool,
+
+    pub bump: u8,
+
     /// How many times this miner has submitted in the current epoch.
     /// Reset to 0 when submission_epoch < current_epoch.
     pub submission_count: u8,
@@ -24,10 +28,6 @@ pub struct MinerAccount {
     /// The epoch for which submission_count applies.
     /// When this differs from current_epoch, submission_count is stale.
     pub submission_epoch: u64,
-
-    pub is_registered: bool,
-
-    pub bump: u8,
 }
 
 impl MinerAccount {
@@ -36,9 +36,9 @@ impl MinerAccount {
         + 8  // total_life_earned
         + 8  // molecules_screened
         + 8  // last_epoch
-        + 1  // submission_count
-        + 8  // submission_epoch
         + 1  // is_registered
         + 1  // bump
-        + 23; // padding (was 32; 9 bytes consumed by submission fields)
+        + 1  // submission_count
+        + 8  // submission_epoch
+        + 23; // padding
 }
