@@ -19,6 +19,9 @@ pub struct MinerAccount {
 
     pub is_registered: bool,
 
+    /// True if the miner registered with 2+ GPUs.
+    pub multi_gpu: bool,
+
     pub bump: u8,
 
     /// How many times this miner has submitted in the current epoch.
@@ -37,8 +40,9 @@ impl MinerAccount {
         + 8  // molecules_screened
         + 8  // last_epoch
         + 1  // is_registered
+        + 1  // multi_gpu
         + 1  // bump
         + 1  // submission_count
         + 8  // submission_epoch
-        + 23; // padding
+        + 22; // padding
 }

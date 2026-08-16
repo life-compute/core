@@ -84,8 +84,8 @@ pub mod life_core {
     // ── Miner ─────────────────────────────────────────────────────────────────
 
     /// Permissionless: create a MinerAccount PDA for the calling wallet.
-    pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
-        instructions::register_miner::register_miner(ctx)
+    pub fn register_miner(ctx: Context<RegisterMiner>, gpu_count: u8) -> Result<()> {
+        instructions::register_miner::register_miner(ctx, gpu_count)
     }
 
     /// Crank: assign a cancer target to a miner for the current epoch.

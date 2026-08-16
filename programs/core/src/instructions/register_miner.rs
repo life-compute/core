@@ -14,8 +14,11 @@ use crate::state::{MinerAccount, NetworkConfig};
 ///
 /// On top of any fee, REGISTRATION_STAKE (0.01 SOL) is locked into the miner's
 /// PDA as an anti-Sybil measure.
-pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
+pub fn register_miner(ctx: Context<RegisterMiner>, gpu_count: u8) -> Result<()> {
     let current_count = ctx.accounts.network_config.total_miners_registered;
+
+    let is_multi_gpu = gpu_count >= 2;
+    let fee = if is_multi_gpu { MULTI_GPU_REGISTRATION_FEE } else { MINER_REGISTRATION_FEE };
 
     // ── Task 1: paid registration from miner #21 onward ──────────────────────
     if current_count >= FREE_MINER_SLOTS {
@@ -27,7 +30,7 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
                     to:   ctx.accounts.foundation.to_account_info(),
                 },
             ),
-            MINER_REGISTRATION_FEE,
+            fee,
         )?;
     }
 
@@ -59,6 +62,7 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
     miner.molecules_screened = 0;
     miner.last_epoch        = 0;
     miner.is_registered     = true;
+    miner.multi_gpu         = is_multi_gpu;
     miner.bump              = ctx.bumps.miner_account;
 
     emit!(MinerRegistered {
