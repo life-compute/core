@@ -56,6 +56,7 @@ pub fn submit_result(
     result.validator_list = [Pubkey::default(); 5];
     result.reward_minted = false;
     result.confirmed_count = 0;
+    result.seq = job.seq;
     result.bump = ctx.bumps.result_submission;
 
     // Mark the job slot as used

@@ -28,12 +28,12 @@
 "use strict";
 
 const anchor = require("@coral-xyz/anchor");
-const web3   = require("@solana/web3.js");
-const fs     = require("fs");
-const path   = require("path");
+const web3 = require("@solana/web3.js");
+const fs = require("fs");
+const path = require("path");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SEED_NETWORK_CONFIG    = Buffer.from("network_config");
+const SEED_NETWORK_CONFIG = Buffer.from("network_config");
 const SEED_VALIDATOR_ACCOUNT = Buffer.from("validator_account");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,24 +64,27 @@ async function getActiveValidators(program, networkConfigPda) {
     if (!pk || pk.equals(web3.PublicKey.default)) continue;
 
     let repData = {
-      reputationBps:    10000,  // default: fully trusted (no history yet)
+      reputationBps: 10000, // default: fully trusted (no history yet)
       totalValidations: 0,
-      confirmations:    0,
-      isActive:         true,
-      lastActiveSlot:   null,
-      pdaExists:        false,
+      confirmations: 0,
+      isActive: true,
+      lastActiveSlot: null,
+      pdaExists: false,
     };
 
     try {
       const pda = validatorAccountPda(pk, programId);
-      const va  = await program.account.validatorAccount.fetch(pda);
+      const va = await program.account.validatorAccount.fetch(pda);
       repData = {
-        reputationBps:    va.reputationBps,
-        totalValidations: va.totalValidations.toNumber?.() ?? Number(va.totalValidations),
-        confirmations:    va.confirmations.toNumber?.()    ?? Number(va.confirmations),
-        isActive:         va.isActive,
-        lastActiveSlot:   va.lastActiveSlot.toNumber?.()  ?? Number(va.lastActiveSlot),
-        pdaExists:        true,
+        reputationBps: va.reputationBps,
+        totalValidations:
+          va.totalValidations.toNumber?.() ?? Number(va.totalValidations),
+        confirmations:
+          va.confirmations.toNumber?.() ?? Number(va.confirmations),
+        isActive: va.isActive,
+        lastActiveSlot:
+          va.lastActiveSlot.toNumber?.() ?? Number(va.lastActiveSlot),
+        pdaExists: true,
       };
     } catch {
       // ValidatorAccount not yet created (validator registered but never validated)
@@ -103,12 +106,12 @@ async function getActiveValidators(program, networkConfigPda) {
  * @returns {string|null}    - base58 pubkey of selected validator, or null
  */
 function pickRandomValidator(validators, slotSeed) {
-  const eligible = validators.filter(v => v.isActive && v.reputationBps > 0);
+  const eligible = validators.filter((v) => v.isActive && v.reputationBps > 0);
   if (eligible.length === 0) return null;
   if (eligible.length === 1) return eligible[0].pubkey;
 
   // Weight proportional to reputation (min weight = 1 even at 0 bps to avoid starvation)
-  const weights = eligible.map(v => Math.max(1, v.reputationBps));
+  const weights = eligible.map((v) => Math.max(1, v.reputationBps));
   const totalWeight = weights.reduce((s, w) => s + w, 0);
 
   // Mix slot with a simple hash so consecutive slots pick differently
@@ -130,15 +133,17 @@ async function getValidatorReputation(program, validatorPubkeyStr) {
   const pk = new web3.PublicKey(validatorPubkeyStr);
   try {
     const pda = validatorAccountPda(pk, programId);
-    const va  = await program.account.validatorAccount.fetch(pda);
+    const va = await program.account.validatorAccount.fetch(pda);
     return {
-      pubkey:           validatorPubkeyStr,
-      reputationBps:    va.reputationBps,
-      reputationPct:    (va.reputationBps / 100).toFixed(1) + "%",
-      totalValidations: va.totalValidations.toNumber?.() ?? Number(va.totalValidations),
-      confirmations:    va.confirmations.toNumber?.()    ?? Number(va.confirmations),
-      isActive:         va.isActive,
-      lastActiveSlot:   va.lastActiveSlot.toNumber?.()  ?? Number(va.lastActiveSlot),
+      pubkey: validatorPubkeyStr,
+      reputationBps: va.reputationBps,
+      reputationPct: (va.reputationBps / 100).toFixed(1) + "%",
+      totalValidations:
+        va.totalValidations.toNumber?.() ?? Number(va.totalValidations),
+      confirmations: va.confirmations.toNumber?.() ?? Number(va.confirmations),
+      isActive: va.isActive,
+      lastActiveSlot:
+        va.lastActiveSlot.toNumber?.() ?? Number(va.lastActiveSlot),
     };
   } catch {
     return null;
@@ -152,9 +157,15 @@ async function printValidatorReport(program, networkConfigPda) {
   const validators = await getActiveValidators(program, networkConfigPda);
   const slot = await program.provider.connection.getSlot();
 
-  console.log("\n╔══════════════════════════════════════════════════════════════════════╗");
-  console.log("║  LIFE Compute — Active Validator Registry                            ║");
-  console.log("╚══════════════════════════════════════════════════════════════════════╝");
+  console.log(
+    "\n╔══════════════════════════════════════════════════════════════════════╗"
+  );
+  console.log(
+    "║  LIFE Compute — Active Validator Registry                            ║"
+  );
+  console.log(
+    "╚══════════════════════════════════════════════════════════════════════╝"
+  );
   console.log(`  Current slot: ${slot}`);
   console.log(`  Active validators: ${validators.length}`);
 
@@ -163,15 +174,17 @@ async function printValidatorReport(program, networkConfigPda) {
     return;
   }
 
-  console.log("\n  Pubkey                                        Rep%   Confirmations  Total");
+  console.log(
+    "\n  Pubkey                                        Rep%   Confirmations  Total"
+  );
   console.log("  " + "─".repeat(80));
 
   for (const v of validators) {
-    const rep    = (v.reputationBps / 100).toFixed(1).padStart(6);
-    const conf   = String(v.confirmations).padStart(13);
-    const total  = String(v.totalValidations).padStart(7);
+    const rep = (v.reputationBps / 100).toFixed(1).padStart(6);
+    const conf = String(v.confirmations).padStart(13);
+    const total = String(v.totalValidations).padStart(7);
     const active = v.isActive ? "✓" : "✗";
-    const hist   = v.pdaExists ? "" : " (no history)";
+    const hist = v.pdaExists ? "" : " (no history)";
     console.log(`  ${active} ${v.pubkey}  ${rep}%  ${conf}  ${total}${hist}`);
   }
 
@@ -184,34 +197,53 @@ async function printValidatorReport(program, networkConfigPda) {
 if (require.main === module) {
   (async () => {
     const args = process.argv.slice(2);
-    const flag = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i+1] : d; };
+    const flag = (n, d) => {
+      const i = args.indexOf(n);
+      return i >= 0 ? args[i + 1] : d;
+    };
 
-    const RPC_URL   = flag("--rpc",     process.env.SOLANA_RPC   || "https://api.devnet.solana.com");
-    const PROG_ID_S = flag("--program", process.env.PROGRAM_ID   || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf");
+    const RPC_URL = flag(
+      "--rpc",
+      process.env.SOLANA_RPC || "https://api.devnet.solana.com"
+    );
+    const PROG_ID_S = flag(
+      "--program",
+      process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+    );
 
     // Find IDL
     const IDL_CANDIDATES = [
       path.join(__dirname, "../target/idl/life_core.json"),
       "/tmp/life-compute/core/target/idl/life_core.json",
     ];
-    let idlPath = IDL_CANDIDATES.find(p => fs.existsSync(p));
-    if (!idlPath) { console.error("IDL not found"); process.exit(1); }
+    let idlPath = IDL_CANDIDATES.find((p) => fs.existsSync(p));
+    if (!idlPath) {
+      console.error("IDL not found");
+      process.exit(1);
+    }
 
     const connection = new web3.Connection(RPC_URL, "confirmed");
     // Read-only — use a throwaway keypair as wallet (no signing needed for read)
     const dummy = web3.Keypair.generate();
-    const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(dummy),
-                                               { commitment: "confirmed" });
+    const provider = new anchor.AnchorProvider(
+      connection,
+      new anchor.Wallet(dummy),
+      { commitment: "confirmed" }
+    );
     const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
     idl.address = PROG_ID_S;
-    const program   = new anchor.Program(idl, provider);
+    const program = new anchor.Program(idl, provider);
     const programId = new web3.PublicKey(PROG_ID_S);
     const [networkConfigPda] = web3.PublicKey.findProgramAddressSync(
-      [SEED_NETWORK_CONFIG], programId
+      [SEED_NETWORK_CONFIG],
+      programId
     );
 
     await printValidatorReport(program, networkConfigPda);
-  })().catch(e => { console.error(e.message); process.exit(1); });
+  })().catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
 }
 
 module.exports = {

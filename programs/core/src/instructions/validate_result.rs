@@ -232,6 +232,7 @@ pub struct ValidateResult<'info> {
             SEED_RESULT,
             &result_submission.epoch.to_le_bytes(),
             result_submission.miner.as_ref(),
+            &[result_submission.seq],
         ],
         bump = result_submission.bump,
         constraint = (

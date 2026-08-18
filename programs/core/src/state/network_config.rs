@@ -1,6 +1,4 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
-
 /// Global program configuration.
 /// PDA seeds: [SEED_NETWORK_CONFIG]
 #[account]

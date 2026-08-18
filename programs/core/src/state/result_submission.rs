@@ -56,6 +56,10 @@ pub struct ResultSubmission {
     pub confirming_validator_count: u8,
 
     pub bump: u8,
+
+    /// Submission sequence within the epoch (0, 1, 2), mirrors job_assignment.seq.
+    /// Part of the PDA seeds: [SEED_RESULT, epoch, miner, &[seq]].
+    pub seq: u8,
 }
 
 impl ResultSubmission {
@@ -76,7 +80,8 @@ impl ResultSubmission {
         + 32 * MAX_VALIDATORS_PER_RESULT // confirming_validator_list
         + 1                           // confirming_validator_count
         + 1                           // bump
-        + 32;                         // padding for future fields
+        + 1                           // seq
+        + 31;                         // padding for future fields
 
     /// Return the SMILES as a &str slice (lossy if non-UTF8, but SMILES is ASCII).
     pub fn smiles_str(&self) -> &str {

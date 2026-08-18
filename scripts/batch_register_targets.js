@@ -33,11 +33,11 @@
 
 "use strict";
 
-const anchor    = require("@coral-xyz/anchor");
-const web3      = require("@solana/web3.js");
-const fs        = require("fs");
-const path      = require("path");
-const os        = require("os");
+const anchor = require("@coral-xyz/anchor");
+const web3 = require("@solana/web3.js");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 // ── CLI argument parsing ───────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -45,10 +45,13 @@ function flag(name, def) {
   const i = args.indexOf(name);
   return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : def;
 }
-function hasFlag(name) { return args.includes(name); }
+function hasFlag(name) {
+  return args.includes(name);
+}
 
 if (hasFlag("--help")) {
-  console.log(`
+  console.log(
+    `
 LIFE Compute — Batch Target Registration
 Usage: node scripts/batch_register_targets.js [options]
 
@@ -62,22 +65,33 @@ Usage: node scripts/batch_register_targets.js [options]
   --end       <N>       Inclusive end index (default: last)
   --dry-run             Print plan, no on-chain calls
   --help                Show this help
-`.trim());
+`.trim()
+  );
   process.exit(0);
 }
 
 // ── Config ─────────────────────────────────────────────────────────────────
-const SCRIPT_DIR   = __dirname;
-const REPO_ROOT    = path.resolve(SCRIPT_DIR, "..");
-const CORE_DIR     = path.join(REPO_ROOT, "..", "core");   // /tmp/life-compute/core
+const SCRIPT_DIR = __dirname;
+const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
+const CORE_DIR = path.join(REPO_ROOT, "..", "core"); // /tmp/life-compute/core
 
-const RPC_URL      = flag("--rpc",     process.env.SOLANA_RPC   || "https://api.devnet.solana.com");
-const PROGRAM_ID_S = flag("--program", process.env.PROGRAM_ID   || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf");
-const KEYPAIR_PATH = flag("--keypair", process.env.AUTH_KEYPAIR  || path.join(os.homedir(), ".life-compute/wallet.json"));
-const BATCH_SIZE   = parseInt(flag("--batch", "10"), 10);
-const DRY_RUN      = hasFlag("--dry-run");
-const START_IDX    = parseInt(flag("--start", "0"), 10);
-const END_IDX_ARG  = flag("--end", null);
+const RPC_URL = flag(
+  "--rpc",
+  process.env.SOLANA_RPC || "https://api.devnet.solana.com"
+);
+const PROGRAM_ID_S = flag(
+  "--program",
+  process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+);
+const KEYPAIR_PATH = flag(
+  "--keypair",
+  process.env.AUTH_KEYPAIR ||
+    path.join(os.homedir(), ".life-compute/wallet.json")
+);
+const BATCH_SIZE = parseInt(flag("--batch", "10"), 10);
+const DRY_RUN = hasFlag("--dry-run");
+const START_IDX = parseInt(flag("--start", "0"), 10);
+const END_IDX_ARG = flag("--end", null);
 
 // IDL auto-discover
 let IDL_PATH = flag("--idl", null);
@@ -88,7 +102,10 @@ if (!IDL_PATH) {
     path.join(SCRIPT_DIR, "..", "target/idl/life_core.json"),
   ];
   for (const c of candidates) {
-    if (fs.existsSync(c)) { IDL_PATH = c; break; }
+    if (fs.existsSync(c)) {
+      IDL_PATH = c;
+      break;
+    }
   }
 }
 if (!IDL_PATH || !fs.existsSync(IDL_PATH)) {
@@ -107,7 +124,10 @@ if (!TARGETS_PATH) {
     "/tmp/life-compute/targets/targets.json",
   ];
   for (const c of candidates) {
-    if (fs.existsSync(c)) { TARGETS_PATH = c; break; }
+    if (fs.existsSync(c)) {
+      TARGETS_PATH = c;
+      break;
+    }
   }
 }
 if (!TARGETS_PATH || !fs.existsSync(TARGETS_PATH)) {
@@ -127,15 +147,19 @@ function uniprotBytes(accession) {
 /** Map difficulty_tier integer to on-chain DifficultyTier enum variant. */
 function difficultyVariant(tier) {
   switch (tier) {
-    case 1:  return { easy:   {} };
-    case 2:  return { medium: {} };
-    case 3:  return { hard:   {} };
-    default: return { medium: {} };   // tier 4 (exploratory) → medium on-chain
+    case 1:
+      return { easy: {} };
+    case 2:
+      return { medium: {} };
+    case 3:
+      return { hard: {} };
+    default:
+      return { medium: {} }; // tier 4 (exploratory) → medium on-chain
   }
 }
 
 /** Sleep N ms. */
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Retry fn up to maxAttempts with exponential backoff. */
 async function withRetry(fn, label, maxAttempts = 3) {
@@ -144,9 +168,13 @@ async function withRetry(fn, label, maxAttempts = 3) {
       return await fn();
     } catch (e) {
       const isLast = attempt === maxAttempts;
-      const wait   = 1000 * (2 ** (attempt - 1));  // 1s, 2s, 4s
+      const wait = 1000 * 2 ** (attempt - 1); // 1s, 2s, 4s
       if (isLast) throw e;
-      console.log(`    Retry ${attempt}/${maxAttempts - 1} for ${label} in ${wait}ms — ${e.message?.slice(0,80)}`);
+      console.log(
+        `    Retry ${attempt}/${
+          maxAttempts - 1
+        } for ${label} in ${wait}ms — ${e.message?.slice(0, 80)}`
+      );
       await sleep(wait);
     }
   }
@@ -189,14 +217,14 @@ async function main() {
 
   // ── Set up Anchor ─────────────────────────────────────────────────────
   const connection = new web3.Connection(RPC_URL, "confirmed");
-  const wallet     = new anchor.Wallet(authKp);
-  const provider   = new anchor.AnchorProvider(connection, wallet, {
+  const wallet = new anchor.Wallet(authKp);
+  const provider = new anchor.AnchorProvider(connection, wallet, {
     commitment: "confirmed",
     skipPreflight: false,
   });
   const idl = JSON.parse(fs.readFileSync(IDL_PATH, "utf8"));
   idl.address = PROGRAM_ID_S;
-  const program   = new anchor.Program(idl, provider);
+  const program = new anchor.Program(idl, provider);
   const programId = new web3.PublicKey(PROGRAM_ID_S);
 
   const [networkConfigPda] = web3.PublicKey.findProgramAddressSync(
@@ -206,36 +234,58 @@ async function main() {
 
   // ── Load targets ──────────────────────────────────────────────────────
   const allTargets = JSON.parse(fs.readFileSync(TARGETS_PATH, "utf8"));
-  const endIdx     = END_IDX_ARG !== null ? parseInt(END_IDX_ARG, 10) : allTargets.length - 1;
-  const targets    = allTargets.slice(START_IDX, endIdx + 1);
+  const endIdx =
+    END_IDX_ARG !== null ? parseInt(END_IDX_ARG, 10) : allTargets.length - 1;
+  const targets = allTargets.slice(START_IDX, endIdx + 1);
 
-  console.log(`Targets to process: ${targets.length} (index ${START_IDX}–${endIdx} of ${allTargets.length} total)\n`);
+  console.log(
+    `Targets to process: ${targets.length} (index ${START_IDX}–${endIdx} of ${allTargets.length} total)\n`
+  );
 
-  // ── Pre-flight: check which are already registered ─────────────────────
+  // ── Pre-flight: check which are already registered (batched getMultipleAccounts) ─
   console.log("Pre-flight: checking existing on-chain registrations...");
   const toRegister = [];
   const alreadyDone = [];
 
-  for (let i = 0; i < targets.length; i++) {
-    const globalIdx = START_IDX + i;
-    const t = targets[i];
-    const { exists } = await targetExists(connection, programId, globalIdx);
-    if (exists) {
-      alreadyDone.push({ idx: globalIdx, id: t.id });
-    } else {
-      toRegister.push({ idx: globalIdx, t });
-    }
-    if ((i + 1) % 25 === 0) {
-      process.stdout.write(`\r  Checked ${i + 1}/${targets.length}...`);
-    }
-    await sleep(50);  // gentle on the RPC
+  // Derive all PDAs up-front
+  const allPdas = targets.map((_, i) => {
+    const id = Buffer.alloc(2);
+    id.writeUInt16LE(START_IDX + i, 0);
+    return web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("target"), id],
+      programId
+    )[0];
+  });
+
+  const CHUNK = 100; // getMultipleAccountsInfo accepts up to 100 keys
+  for (let i = 0; i < allPdas.length; i += CHUNK) {
+    const chunkPdas = allPdas.slice(i, i + CHUNK);
+    const infos = await withRetry(
+      () => connection.getMultipleAccountsInfo(chunkPdas),
+      `preflight chunk ${i / CHUNK + 1}`
+    );
+    infos.forEach((info, j) => {
+      const globalIdx = START_IDX + i + j;
+      const t = targets[i + j];
+      if (info !== null) {
+        alreadyDone.push({ idx: globalIdx, id: t.id });
+      } else {
+        toRegister.push({ idx: globalIdx, t });
+      }
+    });
+    process.stdout.write(
+      `\r  Checked ${Math.min(i + CHUNK, allPdas.length)}/${allPdas.length}...`
+    );
+    await sleep(200); // one request per 200ms across all chunks
   }
   console.log(`\r  Checked ${targets.length}/${targets.length}          `);
   console.log(`  Already registered: ${alreadyDone.length}`);
   console.log(`  To register:        ${toRegister.length}\n`);
 
   if (toRegister.length === 0) {
-    console.log("✓ All targets in range are already registered. Nothing to do.");
+    console.log(
+      "✓ All targets in range are already registered. Nothing to do."
+    );
     return;
   }
 
@@ -243,7 +293,11 @@ async function main() {
     console.log("DRY-RUN — would register:");
     for (const { idx, t } of toRegister.slice(0, 20)) {
       const diff = difficultyVariant(t.difficulty_tier);
-      console.log(`  [${String(idx).padStart(4)}] ${(t.id || t.gene_name || "?").padEnd(15)} ${t.uniprot_id}  diff=${JSON.stringify(diff)}`);
+      console.log(
+        `  [${String(idx).padStart(4)}] ${(t.id || t.gene_name || "?").padEnd(
+          15
+        )} ${t.uniprot_id}  diff=${JSON.stringify(diff)}`
+      );
     }
     if (toRegister.length > 20) {
       console.log(`  ... and ${toRegister.length - 20} more`);
@@ -253,7 +307,7 @@ async function main() {
 
   // ── Register in batches ──────────────────────────────────────────────
   let registered = 0;
-  let failed     = 0;
+  let failed = 0;
   const failures = [];
 
   // Chunk into batches
@@ -262,10 +316,12 @@ async function main() {
     const batchNum = Math.floor(b / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(toRegister.length / BATCH_SIZE);
 
-    console.log(`\nBatch ${batchNum}/${totalBatches} (${batch.length} targets):`);
+    console.log(
+      `\nBatch ${batchNum}/${totalBatches} (${batch.length} targets):`
+    );
 
     for (const { idx, t } of batch) {
-      const geneId    = t.id || t.gene_name || `TARGET_${idx}`;
+      const geneId = t.id || t.gene_name || `TARGET_${idx}`;
       const uniprotId = t.uniprot_id;
       const difficulty = difficultyVariant(t.difficulty_tier || 2);
       const uniprotArr = uniprotBytes(uniprotId);
@@ -278,20 +334,50 @@ async function main() {
         programId
       );
 
-      process.stdout.write(`  [${String(idx).padStart(4)}] ${geneId.padEnd(15)} ${uniprotId}  `);
+      process.stdout.write(
+        `  [${String(idx).padStart(4)}] ${geneId.padEnd(15)} ${uniprotId}  `
+      );
 
       try {
         const tx = await withRetry(async () => {
-          return await program.methods
+          // Build transaction manually and use HTTP polling (not websocket) to avoid ws 429 errors
+          const ix = await program.methods
             .registerTarget(idx, uniprotArr, difficulty)
             .accounts({
-              authority:     authKp.publicKey,
+              authority: authKp.publicKey,
               networkConfig: networkConfigPda,
-              target:        targetPda,
+              target: targetPda,
               systemProgram: web3.SystemProgram.programId,
             })
-            .signers([authKp])
-            .rpc();
+            .instruction();
+          const blockhash = await connection.getLatestBlockhash("confirmed");
+          const msg = new web3.TransactionMessage({
+            payerKey: authKp.publicKey,
+            recentBlockhash: blockhash.blockhash,
+            instructions: [ix],
+          }).compileToV0Message();
+          const vtx = new web3.VersionedTransaction(msg);
+          vtx.sign([authKp]);
+          const sig = await connection.sendTransaction(vtx, {
+            skipPreflight: false,
+            maxRetries: 3,
+          });
+          // Poll for confirmation using HTTP (not websocket)
+          let confirmed = false;
+          for (let p = 0; p < 30; p++) {
+            await sleep(1000);
+            const status = await connection.getSignatureStatuses([sig]);
+            const conf = status?.value?.[0]?.confirmationStatus;
+            if (conf === "confirmed" || conf === "finalized") {
+              confirmed = true;
+              break;
+            }
+            const err = status?.value?.[0]?.err;
+            if (err)
+              throw new Error(`TX failed on-chain: ${JSON.stringify(err)}`);
+          }
+          if (!confirmed) throw new Error("TX not confirmed after 30s");
+          return sig;
         }, geneId);
 
         console.log(`✓  tx: ${tx.slice(0, 16)}…`);
@@ -300,21 +386,26 @@ async function main() {
         const msg = e.message?.slice(0, 120) || String(e);
         console.log(`✗  ERROR: ${msg}`);
         if (e.logs) {
-          const relevant = e.logs.filter(l => l.includes("Error") || l.includes("failed"));
-          if (relevant.length) console.log(`       logs: ${relevant.slice(-2).join(" | ")}`);
+          const relevant = e.logs.filter(
+            (l) => l.includes("Error") || l.includes("failed")
+          );
+          if (relevant.length)
+            console.log(`       logs: ${relevant.slice(-2).join(" | ")}`);
         }
         failed++;
         failures.push({ idx, id: geneId, error: msg });
       }
 
-      // Rate-limit between TXs
-      await sleep(400);
+      // Rate-limit between TXs (800ms to stay well under devnet HTTP limits)
+      await sleep(800);
     }
 
     // Progress report after each batch
     const total = registered + failed;
-    const pct   = Math.round((total / toRegister.length) * 100);
-    console.log(`\n  Progress: Registered ${registered}/${toRegister.length} targets (${pct}%)  Failed: ${failed}`);
+    const pct = Math.round((total / toRegister.length) * 100);
+    console.log(
+      `\n  Progress: Registered ${registered}/${toRegister.length} targets (${pct}%)  Failed: ${failed}`
+    );
 
     if (b + BATCH_SIZE < toRegister.length) {
       // Pause between batches to avoid rate limiting
@@ -335,14 +426,16 @@ async function main() {
     for (const f of failures) {
       console.log(`  [${f.idx}] ${f.id}: ${f.error.slice(0, 80)}`);
     }
-    console.log(`\nRe-run with --start ${failures[0].idx} to retry failed targets.`);
+    console.log(
+      `\nRe-run with --start ${failures[0].idx} to retry failed targets.`
+    );
   }
   if (registered > 0) {
     console.log(`\n✓ ${registered} new target(s) registered on-chain.`);
   }
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error("\nFatal error:", e.message || e);
   if (e.logs) console.error("Program logs:\n" + e.logs.join("\n"));
   process.exit(1);

@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-life_core = "5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p"
+life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
 
 [programs.devnet]
-life_core = "5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p"
+life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
 
 [registry]
 url = "https://api.apr.dev"

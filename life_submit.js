@@ -120,7 +120,18 @@ function log(...args) {
         log('WARN: submission rate limit reached for this epoch (count=' + submissionCount + ')');
       }
     } catch (maErr) {
-      log('WARN: could not decode minerAccount details:', maErr.message);
+      // AccountDidNotDeserialize → stale layout from an older program deployment.
+      // Signal Python to close + re-register before retrying.
+      const errMsg = maErr.message || '';
+      if (errMsg.includes('AccountDidNotDeserialize') ||
+          errMsg.includes('account discriminator mismatch') ||
+          errMsg.includes('Invalid account discriminator') ||
+          errMsg.includes('failed to deserialize')) {
+        log('STALE MinerAccount detected — layout mismatch with current program. Triggering re-registration.');
+        process.stdout.write(JSON.stringify({ status: 'stale_miner_account', reason: errMsg }) + '\n');
+        process.exit(0);
+      }
+      log('WARN: could not decode minerAccount details:', errMsg);
     }
   }
   if (minerInfo === null) {
@@ -189,7 +200,17 @@ function log(...args) {
       })
       .signers([minerKp]).rpc();
   } catch (submitErr) {
-    log('ERROR submitResult:', submitErr.message);
+    const submitErrMsg = submitErr.message || '';
+    // AccountDidNotDeserialize on miner_account during submit → stale layout
+    const allLogs = (submitErr.logs || []).concat(submitErr.errorLogs || []).join('\n');
+    if (submitErrMsg.includes('AccountDidNotDeserialize') ||
+        allLogs.includes('AccountDidNotDeserialize') ||
+        (submitErr.error && JSON.stringify(submitErr.error).includes('AccountDidNotDeserialize'))) {
+      log('STALE MinerAccount detected during submitResult — triggering re-registration.');
+      process.stdout.write(JSON.stringify({ status: 'stale_miner_account', reason: submitErrMsg }) + '\n');
+      process.exit(0);
+    }
+    log('ERROR submitResult:', submitErrMsg);
     if (submitErr.logs) {
       log('program logs:\n' + submitErr.logs.join('\n'));
     }
