@@ -36,9 +36,8 @@ pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE; // 100 LIFE
 
 // ─── Max sizes ────────────────────────────────────────────────────────────
 
-/// Maximum number of registered cancer targets.
-/// Maximum number of registered cancer targets.
-/// target_id is u16 so this can safely reach 2000.
+/// Maximum number of registered cancer targets (u16 → up to 65535).
+/// Currently 60 targets registered: 30 protein + 30 mRNA silencing.
 pub const MAX_TARGETS: u16 = 2000;
 
 /// Maximum submissions a single miner may make per epoch.
