@@ -4,27 +4,33 @@ use crate::constants::*;
 /// Difficulty tier of a cancer target — determines base $LIFE reward.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DifficultyTier {
-    Easy,   // 1 LIFE
-    Medium, // 5 LIFE
+    Easy,   //  1 LIFE
+    Medium, //  5 LIFE
     Hard,   // 25 LIFE
+    Crispr, //  7 LIFE (gRNA knockout targets, CPU-scored)
+    Mrna,   // 25 LIFE (mRNA silencing targets)
 }
 
 impl DifficultyTier {
     /// Base reward in raw token units for this difficulty.
     pub fn base_reward_raw(&self) -> u64 {
         match self {
-            DifficultyTier::Easy => REWARD_EASY,
+            DifficultyTier::Easy   => REWARD_EASY,
             DifficultyTier::Medium => REWARD_MEDIUM,
-            DifficultyTier::Hard => REWARD_HARD,
+            DifficultyTier::Hard   => REWARD_HARD,
+            DifficultyTier::Crispr => REWARD_CRISPR,
+            DifficultyTier::Mrna   => REWARD_MRNA,
         }
     }
 
-    /// Numeric tag emitted in events (0/1/2) for easy indexer parsing.
+    /// Numeric tag emitted in events (0/1/2/3/4) for easy indexer parsing.
     pub fn as_u8(&self) -> u8 {
         match self {
-            DifficultyTier::Easy => 0,
+            DifficultyTier::Easy   => 0,
             DifficultyTier::Medium => 1,
-            DifficultyTier::Hard => 2,
+            DifficultyTier::Hard   => 2,
+            DifficultyTier::Crispr => 3,
+            DifficultyTier::Mrna   => 4,
         }
     }
 }

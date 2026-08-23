@@ -39,7 +39,7 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
     // ── Two-layer halving ──────────────────────────────────────────────────────
     let base_reward = target.difficulty.base_reward_raw();
     let (amount, supply_tier, hit_tier) =
-        calculate_reward(base_reward, config.total_minted, target.hit_count)
+        calculate_reward(base_reward, config.total_minted, target.hit_count, config.current_epoch)
             .ok_or(LifeError::Overflow)?;
 
     // ── 5% validator commission ────────────────────────────────────────────────

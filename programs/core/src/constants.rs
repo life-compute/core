@@ -29,16 +29,44 @@ pub const VALIDATION_TOLERANCE: f32 = 0.05;
 
 // ─── Reward amounts (raw token units at 6 decimals) ───────────────────────
 
-pub const REWARD_EASY: u64 = ONE_LIFE;            //   1 LIFE
-pub const REWARD_MEDIUM: u64 = 5 * ONE_LIFE;      //   5 LIFE
-pub const REWARD_HARD: u64 = 25 * ONE_LIFE;       //  25 LIFE
-pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE; // 100 LIFE
+/// Initial (pre-halving) base rewards per difficulty tier.
+/// These are also the on-chain REWARD_* constants used by base_reward_raw().
+pub const REWARD_EASY:      u64 = ONE_LIFE;            //   1 LIFE
+pub const REWARD_MEDIUM:    u64 = 5  * ONE_LIFE;       //   5 LIFE
+pub const REWARD_HARD:      u64 = 25 * ONE_LIFE;       //  25 LIFE
+pub const REWARD_CRISPR:    u64 = 7  * ONE_LIFE;       //   7 LIFE (gRNA targets)
+pub const REWARD_MRNA:      u64 = 25 * ONE_LIFE;       //  25 LIFE (mRNA silencing)
+pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE;      // 100 LIFE (discovery NFT)
+
+/// Validator commission reward for confirming a CRISPR submission (raw units).
+pub const VALIDATOR_REWARD_CRISPR: u64 = 7 * ONE_LIFE; //   7 LIFE
+
+// ─── Epoch-based halving schedule ─────────────────────────────────────────
+//
+// Every HALVING_INTERVAL epochs the base reward halves (bit-shift right by 1).
+// At 1 epoch ≈ 6 min on devnet / 24 h on mainnet, 210_000 epochs ≈ 1 year
+// on mainnet (210_000 × 216_000 slots × 0.4 s/slot ÷ 86_400 s/day ÷ 365 ≈ 1 yr).
+//
+// Epoch halvings interact multiplicatively with the existing two-layer halving
+// (supply milestones × per-target hit count).  Minimum reward is always 1 raw
+// unit so rewards never reach zero.
+
+/// Number of epochs between successive halvings of the base reward.
+pub const HALVING_INTERVAL:        u64 = 210_000;
+
+/// Initial base rewards (mirrors REWARD_* but named for clarity in halving code).
+pub const INITIAL_EASY_REWARD:     u64 = ONE_LIFE;       //   1 LIFE
+pub const INITIAL_MEDIUM_REWARD:   u64 = 5  * ONE_LIFE;  //   5 LIFE
+pub const INITIAL_HARD_REWARD:     u64 = 25 * ONE_LIFE;  //  25 LIFE
+pub const INITIAL_CRISPR_REWARD:   u64 = 7  * ONE_LIFE;  //   7 LIFE
+pub const INITIAL_MRNA_REWARD:     u64 = 25 * ONE_LIFE;  //  25 LIFE
 
 // ─── Max sizes ────────────────────────────────────────────────────────────
 
 /// Maximum number of registered cancer targets (u16 → up to 65535).
-/// 2030 = 2000 protein targets + 30 mRNA silencing targets (IDs 2000-2029).
-pub const MAX_TARGETS: u16 = 2030;
+/// 3010 = 2000 protein targets + 30 mRNA silencing targets (IDs 2000-2029)
+///      + 10 CRISPR gRNA targets (IDs 3000-3009).
+pub const MAX_TARGETS: u16 = 3010;
 
 /// Maximum submissions a single miner may make per epoch.
 /// Allows up to 3 bites at the apple per 24-hour epoch.
