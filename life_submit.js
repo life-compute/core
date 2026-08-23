@@ -19,6 +19,8 @@ function log(...args) {
   log('rpc:', args.rpc);
   log('programId:', args.programId);
   log('targetIdNum:', args.targetIdNum);
+  log('moleculeType:', args.moleculeType || 'protein');
+  log('boltzSeed:', args.boltzSeed ?? 'n/a');
 
   const conn = new Connection(args.rpc, 'confirmed');
 
@@ -184,7 +186,7 @@ function log(...args) {
   }
 
   // ── Submit result ─────────────────────────────────────────────────────────
-  log('submitting: smiles=' + args.smiles.substring(0, 60) + ' affinity=' + args.affinity);
+  log('submitting: smiles=' + args.smiles.substring(0, 60) + ' affinity=' + args.affinity + ' moleculeType=' + (args.moleculeType || 'protein'));
   let submitTx;
   try {
     submitTx = await program.methods
@@ -267,7 +269,7 @@ function log(...args) {
   const createdInfo = await conn.getAccountInfo(resultPda);
   log('resultPda after submit:', createdInfo !== null ? `EXISTS (${createdInfo.data.length} bytes)` : 'MISSING — tx did not create account!');
 
-  process.stdout.write(JSON.stringify({ status: 'submitted', tx: submitTx, epoch: epoch.toString() }) + '\n');
+  process.stdout.write(JSON.stringify({ status: 'submitted', tx: submitTx, epoch: epoch.toString(), moleculeType: args.moleculeType || 'protein' }) + '\n');
   process.exit(0);
 })().catch(e => {
   // Surface the full error including Anchor program logs
