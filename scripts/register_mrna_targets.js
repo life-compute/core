@@ -25,14 +25,14 @@ const hasFlag = (n) => args.includes(n);
 const RPC_URL = flag("--rpc", "https://api.devnet.solana.com");
 const PROGRAM_ID = flag(
   "--program",
-  "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+  "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf",
 );
 const DRY_RUN = hasFlag("--dry-run");
 const DELAY_MS = 800; // rate-limit between txs
 
 const KEYPAIR_PATH = flag(
   "--keypair",
-  path.join(require("os").homedir(), ".config/solana/id.json")
+  path.join(require("os").homedir(), ".config/solana/id.json"),
 );
 
 // IDL auto-discover
@@ -77,7 +77,7 @@ async function withRetry(fn, label, max = 3) {
       console.log(
         `    retry ${a}/${
           max - 1
-        } for ${label} in ${wait}ms — ${e.message?.slice(0, 80)}`
+        } for ${label} in ${wait}ms — ${e.message?.slice(0, 80)}`,
       );
       await sleep(wait);
     }
@@ -95,7 +95,7 @@ async function main() {
   if (DRY_RUN) console.log("Mode:     DRY-RUN\n");
 
   const authKp = web3.Keypair.fromSecretKey(
-    Buffer.from(JSON.parse(fs.readFileSync(KEYPAIR_PATH, "utf8")))
+    Buffer.from(JSON.parse(fs.readFileSync(KEYPAIR_PATH, "utf8"))),
   );
   console.log(`Authority: ${authKp.publicKey.toBase58()}\n`);
 
@@ -111,7 +111,7 @@ async function main() {
 
   const [networkConfigPda] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("network_config")],
-    programId
+    programId,
   );
 
   // Load mRNA targets from file
@@ -129,7 +129,7 @@ async function main() {
     buf.writeUInt16LE(MRNA_BASE_ID + i, 0);
     return web3.PublicKey.findProgramAddressSync(
       [Buffer.from("target"), buf],
-      programId
+      programId,
     )[0];
   });
   const infos = await connection.getMultipleAccountsInfo(pdas);
@@ -146,7 +146,7 @@ async function main() {
   if (alreadyDone.length) {
     console.log(
       "Already done:",
-      alreadyDone.map((x) => `${x.id}(${x.onchainId})`).join(", ")
+      alreadyDone.map((x) => `${x.id}(${x.onchainId})`).join(", "),
     );
     console.log();
   }
@@ -160,7 +160,7 @@ async function main() {
     console.log("DRY-RUN — would register:");
     for (const { onchainId, t } of toRegister) {
       console.log(
-        `  [${onchainId}] ${t.id.padEnd(20)} uniprot=${t.uniprot_id}  diff=Hard`
+        `  [${onchainId}] ${t.id.padEnd(20)} uniprot=${t.uniprot_id}  diff=Hard`,
       );
     }
     return;
@@ -172,7 +172,7 @@ async function main() {
 
   for (const { onchainId, t, pda } of toRegister) {
     process.stdout.write(
-      `  [${onchainId}] ${t.id.padEnd(20)} ${t.uniprot_id}  `
+      `  [${onchainId}] ${t.id.padEnd(20)} ${t.uniprot_id}  `,
     );
     try {
       const tx = await withRetry(async () => {
@@ -222,19 +222,19 @@ async function main() {
   console.log("REGISTRATION COMPLETE");
   console.log("═".repeat(60));
   console.log(
-    `Registered: ${registered}  |  Already existed: ${alreadyDone.length}  |  Failed: ${failed}`
+    `Registered: ${registered}  |  Already existed: ${alreadyDone.length}  |  Failed: ${failed}`,
   );
   if (failures.length) {
     console.log("\nFailed:");
     failures.forEach((f) =>
-      console.log(`  [${f.onchainId}] ${f.id}: ${f.error}`)
+      console.log(`  [${f.onchainId}] ${f.id}: ${f.error}`),
     );
   }
   if (registered > 0)
     console.log(
       `\n✓ ${registered} mRNA target(s) registered on-chain at IDs 2000-${
         2000 + registered - 1
-      }.`
+      }.`,
     );
 }
 

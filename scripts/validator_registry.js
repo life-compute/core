@@ -44,7 +44,7 @@ const SEED_VALIDATOR_ACCOUNT = Buffer.from("validator_account");
 function validatorAccountPda(validatorPubkey, programId) {
   const [pda] = web3.PublicKey.findProgramAddressSync(
     [SEED_VALIDATOR_ACCOUNT, validatorPubkey.toBuffer()],
-    programId
+    programId,
   );
   return pda;
 }
@@ -158,13 +158,13 @@ async function printValidatorReport(program, networkConfigPda) {
   const slot = await program.provider.connection.getSlot();
 
   console.log(
-    "\n╔══════════════════════════════════════════════════════════════════════╗"
+    "\n╔══════════════════════════════════════════════════════════════════════╗",
   );
   console.log(
-    "║  LIFE Compute — Active Validator Registry                            ║"
+    "║  LIFE Compute — Active Validator Registry                            ║",
   );
   console.log(
-    "╚══════════════════════════════════════════════════════════════════════╝"
+    "╚══════════════════════════════════════════════════════════════════════╝",
   );
   console.log(`  Current slot: ${slot}`);
   console.log(`  Active validators: ${validators.length}`);
@@ -175,7 +175,7 @@ async function printValidatorReport(program, networkConfigPda) {
   }
 
   console.log(
-    "\n  Pubkey                                        Rep%   Confirmations  Total"
+    "\n  Pubkey                                        Rep%   Confirmations  Total",
   );
   console.log("  " + "─".repeat(80));
 
@@ -204,11 +204,11 @@ if (require.main === module) {
 
     const RPC_URL = flag(
       "--rpc",
-      process.env.SOLANA_RPC || "https://api.devnet.solana.com"
+      process.env.SOLANA_RPC || "https://api.devnet.solana.com",
     );
     const PROG_ID_S = flag(
       "--program",
-      process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+      process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf",
     );
 
     // Find IDL
@@ -228,7 +228,7 @@ if (require.main === module) {
     const provider = new anchor.AnchorProvider(
       connection,
       new anchor.Wallet(dummy),
-      { commitment: "confirmed" }
+      { commitment: "confirmed" },
     );
     const idl = JSON.parse(fs.readFileSync(idlPath, "utf8"));
     idl.address = PROG_ID_S;
@@ -236,7 +236,7 @@ if (require.main === module) {
     const programId = new web3.PublicKey(PROG_ID_S);
     const [networkConfigPda] = web3.PublicKey.findProgramAddressSync(
       [SEED_NETWORK_CONFIG],
-      programId
+      programId,
     );
 
     await printValidatorReport(program, networkConfigPda);

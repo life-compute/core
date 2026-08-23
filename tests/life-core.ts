@@ -21,7 +21,7 @@ const SUPPLY_CAP = ONE_LIFE.muln(21_000_000);
 const IS_DEVNET = (process.env.ANCHOR_PROVIDER_URL ?? "").includes("devnet");
 const EPOCH_SLOTS = new BN(IS_DEVNET ? 1_000 : 216_000);
 const FOUNDATION_WALLET = new PublicKey(
-  "2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb"
+  "2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb",
 );
 const VALIDATORS_REQUIRED = 2;
 const VALIDATION_TOLERANCE = 0.05;
@@ -63,11 +63,11 @@ describe("life_core", () => {
   anchor.setProvider(provider);
 
   const PROGRAM_ID = new PublicKey(
-    "5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p"
+    "5Kho7HP9PaLnn7xECEamWwwsmyBgjnnKDtUHjwuG8V3p",
   );
   const program = new anchor.Program<LifeCore>(
     require("../target/idl/life_core.json"),
-    provider
+    provider,
   );
   const authority = provider.wallet as anchor.Wallet;
 
@@ -79,13 +79,13 @@ describe("life_core", () => {
     secretKey: number[];
   }[] = require("/tmp/life-test-validators.json");
   const validator1 = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(_vData[0].secretKey)
+    Uint8Array.from(_vData[0].secretKey),
   );
   const validator2 = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(_vData[1].secretKey)
+    Uint8Array.from(_vData[1].secretKey),
   );
   const validator3 = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(_vData[2].secretKey)
+    Uint8Array.from(_vData[2].secretKey),
   );
 
   // Miner keypair — new each run (MinerAccount PDA is per-pubkey, always fresh)
@@ -102,15 +102,15 @@ describe("life_core", () => {
   before(async () => {
     [networkConfigPda, networkConfigBump] = PublicKey.findProgramAddressSync(
       [SEED_NETWORK_CONFIG],
-      program.programId
+      program.programId,
     );
     [lifeMintPda, lifeMintBump] = PublicKey.findProgramAddressSync(
       [SEED_LIFE_MINT],
-      program.programId
+      program.programId,
     );
     [mintAuthorityPda, mintAuthorityBump] = PublicKey.findProgramAddressSync(
       [SEED_LIFE_MINT, Buffer.from("authority")],
-      program.programId
+      program.programId,
     );
 
     // Fund validators and miner (0.05 SOL: covers 0.01 stake + rent + fees)
@@ -121,11 +121,11 @@ describe("life_core", () => {
           fromPubkey: authority.publicKey,
           toPubkey: kp.publicKey,
           lamports: 0.05 * anchor.web3.LAMPORTS_PER_SOL,
-        })
+        }),
       );
       const sig = await provider.sendAndConfirm(tx);
       console.log(
-        `    Funded ${kp.publicKey.toBase58().slice(0, 8)}... : ${sig}`
+        `    Funded ${kp.publicKey.toBase58().slice(0, 8)}... : ${sig}`,
       );
     }
   });
@@ -144,7 +144,7 @@ describe("life_core", () => {
           EPOCH_SLOTS,
           VALIDATORS_REQUIRED,
           VALIDATION_TOLERANCE,
-          [validator1.publicKey, validator2.publicKey, validator3.publicKey]
+          [validator1.publicKey, validator2.publicKey, validator3.publicKey],
         )
         .accounts({
           authority: authority.publicKey,
@@ -167,7 +167,7 @@ describe("life_core", () => {
     assert.approximately(
       config.validationTolerance,
       VALIDATION_TOLERANCE,
-      0.001
+      0.001,
     );
     assert.equal(config.validatorCount, 3);
     assert.isTrue(config.lifeMint.equals(lifeMintPda));
@@ -181,7 +181,7 @@ describe("life_core", () => {
   it("registers TP53 as a Hard target", async () => {
     [targetPda] = PublicKey.findProgramAddressSync(
       [SEED_TARGET, targetIdBytes(TARGET_ID)],
-      program.programId
+      program.programId,
     );
 
     // TargetAccount uses init — only created once. Skip if already registered.
@@ -231,7 +231,7 @@ describe("life_core", () => {
   it("registers a miner permissionlessly (Fix 3-A: 0.01 SOL stake required)", async () => {
     [minerAccountPda] = PublicKey.findProgramAddressSync(
       [SEED_MINER, miner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -264,7 +264,7 @@ describe("life_core", () => {
 
     [jobPda] = PublicKey.findProgramAddressSync(
       [SEED_JOB, epochBytes(currentEpoch), miner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -295,7 +295,7 @@ describe("life_core", () => {
   it("miner submits a result", async () => {
     [resultPda] = PublicKey.findProgramAddressSync(
       [SEED_RESULT, epochBytes(currentEpoch), miner.publicKey.toBuffer()],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -380,7 +380,7 @@ describe("life_core", () => {
     if (!registered.includes(validator1.publicKey.toBase58())) {
       console.log(
         `    SKIP: on-chain validators (${registered[0].slice(0, 8)}...) ` +
-          `don't match deterministic test keys — need fresh initialize()`
+          `don't match deterministic test keys — need fresh initialize()`,
       );
       this.skip();
     }
@@ -388,7 +388,7 @@ describe("life_core", () => {
     const currentWeek = config.currentEpoch.divn(7);
     [leaderboardPda] = PublicKey.findProgramAddressSync(
       [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
-      program.programId
+      program.programId,
     );
 
     const [validationPda1] = PublicKey.findProgramAddressSync(
@@ -397,7 +397,7 @@ describe("life_core", () => {
         resultPda.toBuffer(),
         validator1.publicKey.toBuffer(),
       ],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -433,7 +433,7 @@ describe("life_core", () => {
     const currentWeek = config.currentEpoch.divn(7);
     [leaderboardPda] = PublicKey.findProgramAddressSync(
       [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
-      program.programId
+      program.programId,
     );
 
     const [validationPda2] = PublicKey.findProgramAddressSync(
@@ -442,7 +442,7 @@ describe("life_core", () => {
         resultPda.toBuffer(),
         validator2.publicKey.toBuffer(),
       ],
-      program.programId
+      program.programId,
     );
 
     await program.methods
@@ -491,7 +491,7 @@ describe("life_core", () => {
         resultPda.toBuffer(),
         validator1.publicKey.toBuffer(),
       ],
-      program.programId
+      program.programId,
     );
 
     try {
@@ -513,7 +513,7 @@ describe("life_core", () => {
     } catch (e) {
       assert.isTrue(
         e.message.includes("already in use") ||
-          e.message.includes("ResultAlreadyFinalized")
+          e.message.includes("ResultAlreadyFinalized"),
       );
     }
   });
@@ -524,22 +524,22 @@ describe("life_core", () => {
     const result = await program.account.resultSubmission.fetch(resultPda);
     if (!("confirmed" in result.status)) {
       console.log(
-        "    SKIP: result not Confirmed (validator tests skipped above)"
+        "    SKIP: result not Confirmed (validator tests skipped above)",
       );
       this.skip();
     }
 
     const minerAta = await getAssociatedTokenAddress(
       lifeMintPda,
-      miner.publicKey
+      miner.publicKey,
     );
     const tx = new anchor.web3.Transaction().add(
       createAssociatedTokenAccountInstruction(
         authority.publicKey,
         minerAta,
         miner.publicKey,
-        lifeMintPda
-      )
+        lifeMintPda,
+      ),
     );
     await provider.sendAndConfirm(tx);
 
@@ -563,9 +563,8 @@ describe("life_core", () => {
     assert.equal(balance.value.amount, "25000000");
     assert.equal(balance.value.decimals, 6);
 
-    const configAfter = await program.account.networkConfig.fetch(
-      networkConfigPda
-    );
+    const configAfter =
+      await program.account.networkConfig.fetch(networkConfigPda);
     assert.isTrue(configAfter.totalMinted.gte(new BN(25_000_000)));
 
     const minerAcc = await program.account.minerAccount.fetch(minerAccountPda);
@@ -583,7 +582,7 @@ describe("life_core", () => {
 
     const minerAta = await getAssociatedTokenAddress(
       lifeMintPda,
-      miner.publicKey
+      miner.publicKey,
     );
     try {
       await program.methods
@@ -612,7 +611,7 @@ describe("life_core", () => {
     const config = await program.account.networkConfig.fetch(networkConfigPda);
     assert.equal(
       config.supplyCap.toString(),
-      (21_000_000 * 1_000_000).toString()
+      (21_000_000 * 1_000_000).toString(),
     );
   });
 
@@ -641,15 +640,15 @@ describe("life_core", () => {
           fromPubkey: authority.publicKey,
           toPubkey: rando.publicKey,
           lamports: 0.01 * anchor.web3.LAMPORTS_PER_SOL,
-        })
-      )
+        }),
+      ),
     );
 
     const config = await program.account.networkConfig.fetch(networkConfigPda);
     const currentWeek = config.currentEpoch.divn(7);
     const [lbPda] = PublicKey.findProgramAddressSync(
       [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
-      program.programId
+      program.programId,
     );
     const [validationPdaRando] = PublicKey.findProgramAddressSync(
       [
@@ -657,7 +656,7 @@ describe("life_core", () => {
         resultPda.toBuffer(),
         rando.publicKey.toBuffer(),
       ],
-      program.programId
+      program.programId,
     );
 
     try {
@@ -686,7 +685,7 @@ describe("life_core", () => {
     const currentWeek = config.currentEpoch.divn(7);
     const [lbPda] = PublicKey.findProgramAddressSync(
       [SEED_LEADERBOARD, weekBytes(currentWeek), targetIdBytes(TARGET_ID)],
-      program.programId
+      program.programId,
     );
 
     const lbExists = await provider.connection
@@ -695,7 +694,7 @@ describe("life_core", () => {
 
     if (!lbExists) {
       console.log(
-        "    NOTE: Leaderboard not yet created — bonus correctly unavailable"
+        "    NOTE: Leaderboard not yet created — bonus correctly unavailable",
       );
       return;
     }
@@ -703,7 +702,7 @@ describe("life_core", () => {
     // Ensure miner ATA exists (may not if mint_reward was skipped)
     const minerAta = await getAssociatedTokenAddress(
       lifeMintPda,
-      miner.publicKey
+      miner.publicKey,
     );
     const ataExists = await provider.connection
       .getAccountInfo(minerAta)
@@ -714,8 +713,8 @@ describe("life_core", () => {
           authority.publicKey,
           minerAta,
           miner.publicKey,
-          lifeMintPda
-        )
+          lifeMintPda,
+        ),
       );
       await provider.sendAndConfirm(tx);
     }
@@ -743,7 +742,7 @@ describe("life_core", () => {
           e.message.includes("NotTheWinner") ||
           e.message.includes("ConstraintMut") ||
           e.message.includes("BonusAlreadyMinted"),
-        `Expected WeekNotClosed/NotTheWinner/BonusAlreadyMinted, got: ${e.message}`
+        `Expected WeekNotClosed/NotTheWinner/BonusAlreadyMinted, got: ${e.message}`,
       );
     }
   });
@@ -763,7 +762,7 @@ describe("life_core", () => {
     console.log(`  Validator count:   ${config.validatorCount}`);
     console.log(`  Miner LIFE earned: ${minerAcc.totalLifeEarned.toString()}`);
     console.log(
-      `  Molecules screened:${minerAcc.moleculesScreened.toString()}`
+      `  Molecules screened:${minerAcc.moleculesScreened.toString()}`,
     );
     console.log(`  TP53 hit count:    ${target.hitCount.toString()}`);
     console.log("══════════════════════════════════════\n");

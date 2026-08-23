@@ -65,7 +65,7 @@ Usage: node scripts/batch_register_targets.js [options]
   --end       <N>       Inclusive end index (default: last)
   --dry-run             Print plan, no on-chain calls
   --help                Show this help
-`.trim()
+`.trim(),
   );
   process.exit(0);
 }
@@ -77,16 +77,16 @@ const CORE_DIR = path.join(REPO_ROOT, "..", "core"); // /tmp/life-compute/core
 
 const RPC_URL = flag(
   "--rpc",
-  process.env.SOLANA_RPC || "https://api.devnet.solana.com"
+  process.env.SOLANA_RPC || "https://api.devnet.solana.com",
 );
 const PROGRAM_ID_S = flag(
   "--program",
-  process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+  process.env.PROGRAM_ID || "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf",
 );
 const KEYPAIR_PATH = flag(
   "--keypair",
   process.env.AUTH_KEYPAIR ||
-    path.join(os.homedir(), ".life-compute/wallet.json")
+    path.join(os.homedir(), ".life-compute/wallet.json"),
 );
 const BATCH_SIZE = parseInt(flag("--batch", "10"), 10);
 const DRY_RUN = hasFlag("--dry-run");
@@ -173,7 +173,7 @@ async function withRetry(fn, label, maxAttempts = 3) {
       console.log(
         `    Retry ${attempt}/${
           maxAttempts - 1
-        } for ${label} in ${wait}ms — ${e.message?.slice(0, 80)}`
+        } for ${label} in ${wait}ms — ${e.message?.slice(0, 80)}`,
       );
       await sleep(wait);
     }
@@ -186,7 +186,7 @@ async function targetExists(connection, programId, targetId) {
   idBytes.writeUInt16LE(targetId, 0);
   const [pda] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("target"), idBytes],
-    programId
+    programId,
   );
   const info = await connection.getAccountInfo(pda);
   return { exists: info !== null, pda };
@@ -211,7 +211,7 @@ async function main() {
     process.exit(1);
   }
   const authKp = web3.Keypair.fromSecretKey(
-    Buffer.from(JSON.parse(fs.readFileSync(KEYPAIR_PATH, "utf8")))
+    Buffer.from(JSON.parse(fs.readFileSync(KEYPAIR_PATH, "utf8"))),
   );
   console.log(`Authority: ${authKp.publicKey.toBase58()}`);
 
@@ -229,7 +229,7 @@ async function main() {
 
   const [networkConfigPda] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("network_config")],
-    programId
+    programId,
   );
 
   // ── Load targets ──────────────────────────────────────────────────────
@@ -239,7 +239,7 @@ async function main() {
   const targets = allTargets.slice(START_IDX, endIdx + 1);
 
   console.log(
-    `Targets to process: ${targets.length} (index ${START_IDX}–${endIdx} of ${allTargets.length} total)\n`
+    `Targets to process: ${targets.length} (index ${START_IDX}–${endIdx} of ${allTargets.length} total)\n`,
   );
 
   // ── Pre-flight: check which are already registered (batched getMultipleAccounts) ─
@@ -253,7 +253,7 @@ async function main() {
     id.writeUInt16LE(START_IDX + i, 0);
     return web3.PublicKey.findProgramAddressSync(
       [Buffer.from("target"), id],
-      programId
+      programId,
     )[0];
   });
 
@@ -262,7 +262,7 @@ async function main() {
     const chunkPdas = allPdas.slice(i, i + CHUNK);
     const infos = await withRetry(
       () => connection.getMultipleAccountsInfo(chunkPdas),
-      `preflight chunk ${i / CHUNK + 1}`
+      `preflight chunk ${i / CHUNK + 1}`,
     );
     infos.forEach((info, j) => {
       const globalIdx = START_IDX + i + j;
@@ -274,7 +274,7 @@ async function main() {
       }
     });
     process.stdout.write(
-      `\r  Checked ${Math.min(i + CHUNK, allPdas.length)}/${allPdas.length}...`
+      `\r  Checked ${Math.min(i + CHUNK, allPdas.length)}/${allPdas.length}...`,
     );
     await sleep(200); // one request per 200ms across all chunks
   }
@@ -284,7 +284,7 @@ async function main() {
 
   if (toRegister.length === 0) {
     console.log(
-      "✓ All targets in range are already registered. Nothing to do."
+      "✓ All targets in range are already registered. Nothing to do.",
     );
     return;
   }
@@ -295,8 +295,8 @@ async function main() {
       const diff = difficultyVariant(t.difficulty_tier);
       console.log(
         `  [${String(idx).padStart(4)}] ${(t.id || t.gene_name || "?").padEnd(
-          15
-        )} ${t.uniprot_id}  diff=${JSON.stringify(diff)}`
+          15,
+        )} ${t.uniprot_id}  diff=${JSON.stringify(diff)}`,
       );
     }
     if (toRegister.length > 20) {
@@ -317,7 +317,7 @@ async function main() {
     const totalBatches = Math.ceil(toRegister.length / BATCH_SIZE);
 
     console.log(
-      `\nBatch ${batchNum}/${totalBatches} (${batch.length} targets):`
+      `\nBatch ${batchNum}/${totalBatches} (${batch.length} targets):`,
     );
 
     for (const { idx, t } of batch) {
@@ -331,11 +331,11 @@ async function main() {
       idBytes.writeUInt16LE(idx, 0);
       const [targetPda] = web3.PublicKey.findProgramAddressSync(
         [Buffer.from("target"), idBytes],
-        programId
+        programId,
       );
 
       process.stdout.write(
-        `  [${String(idx).padStart(4)}] ${geneId.padEnd(15)} ${uniprotId}  `
+        `  [${String(idx).padStart(4)}] ${geneId.padEnd(15)} ${uniprotId}  `,
       );
 
       try {
@@ -387,7 +387,7 @@ async function main() {
         console.log(`✗  ERROR: ${msg}`);
         if (e.logs) {
           const relevant = e.logs.filter(
-            (l) => l.includes("Error") || l.includes("failed")
+            (l) => l.includes("Error") || l.includes("failed"),
           );
           if (relevant.length)
             console.log(`       logs: ${relevant.slice(-2).join(" | ")}`);
@@ -404,7 +404,7 @@ async function main() {
     const total = registered + failed;
     const pct = Math.round((total / toRegister.length) * 100);
     console.log(
-      `\n  Progress: Registered ${registered}/${toRegister.length} targets (${pct}%)  Failed: ${failed}`
+      `\n  Progress: Registered ${registered}/${toRegister.length} targets (${pct}%)  Failed: ${failed}`,
     );
 
     if (b + BATCH_SIZE < toRegister.length) {
@@ -427,7 +427,7 @@ async function main() {
       console.log(`  [${f.idx}] ${f.id}: ${f.error.slice(0, 80)}`);
     }
     console.log(
-      `\nRe-run with --start ${failures[0].idx} to retry failed targets.`
+      `\nRe-run with --start ${failures[0].idx} to retry failed targets.`,
     );
   }
   if (registered > 0) {
