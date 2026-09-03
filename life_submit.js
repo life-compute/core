@@ -418,6 +418,8 @@ function log(...args) {
       tx: submitTx,
       epoch: epoch.toString(),
       moleculeType: args.moleculeType || "protein",
+      resultPda: resultPda.toBase58(),
+      seq: SEQ,
     }) + "\n",
   );
   process.exit(0);

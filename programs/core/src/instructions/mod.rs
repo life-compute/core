@@ -10,6 +10,8 @@ pub mod claim_discovery_bonus;
 pub mod advance_epoch;
 pub mod evict_validator;
 pub mod update_validators;
+pub mod set_tolerance;
+pub mod recount_confirmations;
 
 pub use initialize::*;
 pub use register_target::*;
@@ -23,3 +25,5 @@ pub use claim_discovery_bonus::*;
 pub use advance_epoch::*;
 pub use evict_validator::*;
 pub use update_validators::*;
+pub use set_tolerance::*;
+pub use recount_confirmations::*;
