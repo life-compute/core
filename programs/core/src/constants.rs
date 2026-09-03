@@ -130,9 +130,9 @@ pub const MINER_REGISTRATION_FEE: u64 = 33_000_000; // lamports
 /// Fee paid by multi-GPU miners (2+ GPUs) on registration (0.1 SOL = ~$15).
 pub const MULTI_GPU_REGISTRATION_FEE: u64 = 100_000_000; // lamports
 
-/// Fee paid by every validator on self-registration (0.1 SOL), sent directly to
+/// Fee paid by every validator on self-registration (0.05 SOL ≈ $5), sent directly to
 /// the foundation wallet.
-pub const VALIDATOR_REGISTRATION_FEE: u64 = 100_000_000; // lamports
+pub const VALIDATOR_REGISTRATION_FEE: u64 = 50_000_000; // lamports
 
 /// Foundation wallet — direct recipient for all registration fees.
 /// No treasury PDA; SOL goes straight here.

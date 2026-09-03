@@ -103,7 +103,7 @@ pub struct EpochAdvanced {
     pub slot: i64,
 }
 
-/// Emitted when a validator pays the 0.1 SOL fee and joins the validator set.
+/// Emitted when a validator pays the 0.05 SOL fee and joins the validator set.
 #[event]
 pub struct ValidatorRegistered {
     pub validator: Pubkey,

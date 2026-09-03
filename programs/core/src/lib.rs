@@ -146,7 +146,25 @@ pub mod life_core {
         instructions::update_validators::update_validators(ctx, new_validators, validators_required)
     }
 
-    /// Permissionless: pay 0.1 SOL to the foundation and join the validator set.
+    /// Set validation_tolerance on NetworkConfig. Authority-only.
+    /// Does not touch validators, validators_required, or any other state.
+    pub fn set_tolerance(
+        ctx: Context<SetTolerance>,
+        validation_tolerance: f32,
+    ) -> Result<()> {
+        instructions::set_tolerance::set_tolerance(ctx, validation_tolerance)
+    }
+
+    /// Permissionless crank: re-evaluate all stored rescored_affinities for a
+    /// Validating or Rejected result against the *current* validation_tolerance
+    /// and re-finalize.  Use after set_tolerance to rescue stuck submissions.
+    pub fn recount_confirmations(
+        ctx: Context<RecountConfirmations>,
+    ) -> Result<()> {
+        instructions::recount_confirmations::recount_confirmations(ctx)
+    }
+
+    /// Permissionless: pay 0.05 SOL to the foundation and join the validator set.
     /// Increments total_validators_registered in NetworkConfig.
     pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
         instructions::register_validator::register_validator(ctx)

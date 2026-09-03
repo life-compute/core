@@ -5,13 +5,13 @@ use crate::errors::LifeError;
 use crate::events::ValidatorRegistered;
 use crate::state::NetworkConfig;
 
-/// Permissionless: any wallet can pay 0.1 SOL to the foundation and join the
+/// Permissionless: any wallet can pay 0.05 SOL to the foundation and join the
 /// active validator set.
 ///
 /// Rules:
 ///   • Caller must NOT already be in NetworkConfig.validators.
 ///   • Registry must have a free slot (validator_count < 5).
-///   • 0.1 SOL fee transferred directly to the foundation wallet (no PDA).
+///   • 0.05 SOL fee transferred directly to the foundation wallet (no PDA).
 ///   • Increments total_validators_registered (monotone counter, never resets).
 pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
     let config = &mut ctx.accounts.network_config;
@@ -29,7 +29,7 @@ pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
         LifeError::ValidatorRegistryFull
     );
 
-    // ── 0.1 SOL fee → foundation ──────────────────────────────────────────────
+    // ── 0.05 SOL fee → foundation ─────────────────────────────────────────────
     system_program::transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -65,7 +65,7 @@ pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct RegisterValidator<'info> {
-    /// The wallet that wants to join as a validator; pays the 0.1 SOL fee.
+    /// The wallet that wants to join as a validator; pays the 0.05 SOL fee.
     #[account(mut)]
     pub validator: Signer<'info>,
 
@@ -77,7 +77,7 @@ pub struct RegisterValidator<'info> {
     )]
     pub network_config: Account<'info, NetworkConfig>,
 
-    /// Foundation wallet — receives the 0.1 SOL validator registration fee.
+    /// Foundation wallet — receives the 0.05 SOL validator registration fee.
     #[account(
         mut,
         constraint = foundation.key() == FOUNDATION_WALLET @ LifeError::Unauthorized,
