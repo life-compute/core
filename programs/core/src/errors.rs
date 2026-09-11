@@ -102,6 +102,10 @@ pub enum LifeError {
     #[msg("Discovery bonus can only be claimed after the week has closed")]
     WeekNotClosed,
 
+    // ─── Deduplication ────────────────────────────────────────────────────────
+    #[msg("This SMILES/gRNA has already been confirmed for this target by another wallet — duplicate submission blocked")]
+    DuplicateMolecule,
+
     // ─── Epoch ───────────────────────────────────────────────────────────────
     #[msg("Not enough slots have elapsed to advance the epoch")]
     EpochNotReady,

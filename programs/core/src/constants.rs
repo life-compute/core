@@ -90,6 +90,10 @@ pub const SEED_VALIDATION: &[u8] = b"validation";
 pub const SEED_VALIDATOR_ACCOUNT: &[u8] = b"validator_account";
 pub const SEED_LEADERBOARD: &[u8] = b"leaderboard";
 
+/// PDA seed for ConfirmedMolecule deduplication accounts.
+/// Seeds: [SEED_CONFIRMED_MOL, target_id_le_bytes (2), smiles_hash (32)]
+pub const SEED_CONFIRMED_MOL: &[u8] = b"confirmed_mol";
+
 // ─── Slots per week (~7 days at 400 ms/slot) ──────────────────────────────
 pub const SLOTS_PER_WEEK: u64 = EPOCH_DURATION_SLOTS * 7; // 1_512_000
 

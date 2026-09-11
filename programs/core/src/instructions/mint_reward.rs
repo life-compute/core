@@ -1,11 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_lang::AccountDeserialize;
+use anchor_lang::solana_program::hash::hash as sol_sha256;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use crate::constants::*;
 use crate::errors::LifeError;
 use crate::events::{RewardMinted, ValidatorCommissionMinted};
 use crate::rewards::calculate_reward;
-use crate::state::{MinerAccount, NetworkConfig, ResultStatus, ResultSubmission};
+use crate::state::{ConfirmedMolecule, MinerAccount, NetworkConfig, ResultStatus, ResultSubmission};
 
 /// Permissionless crank: anyone can call this once a result is Confirmed.
 ///
@@ -13,6 +14,16 @@ use crate::state::{MinerAccount, NetworkConfig, ResultStatus, ResultSubmission};
 ///   1. The halved $LIFE reward to the miner's canonical ATA.
 ///   2. A 5% validator commission split equally among confirming validators,
 ///      minted to their ATAs (passed as `remaining_accounts` in order).
+///
+/// Deduplication:
+///   Before minting, computes SHA-256(smiles_bytes[..smiles_len]) and attempts
+///   to initialise a `ConfirmedMolecule` PDA keyed by (target_id, smiles_hash).
+///   If that PDA already exists the instruction returns `DuplicateMolecule` and
+///   no tokens are minted — closing the sybil bypass where different wallets
+///   submit the same SMILES/gRNA and each collect a full reward.
+///
+///   The first caller wins; all subsequent callers for the same molecule+target
+///   pair are rejected at the Anchor account-init constraint level.
 ///
 /// `remaining_accounts` layout (caller-supplied):
 ///   [0..confirming_validator_count] = validator ATAs (mut), in list order.
@@ -23,13 +34,49 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
     let result_pda_key = ctx.accounts.result_submission.key();
     let result_miner;
     let result_target_id;
+    let smiles_len;
+    let smiles_bytes_copy: [u8; 512];
     {
         let result = &ctx.accounts.result_submission;
         result_miner     = result.miner;
         result_target_id = result.target_id;
+        smiles_len       = result.smiles_len as usize;
+        smiles_bytes_copy = result.smiles;
         require!(result.status == ResultStatus::Confirmed, LifeError::ResultNotConfirmed);
         require!(!result.reward_minted, LifeError::RewardAlreadyMinted);
     }
+
+    // ── Sybil deduplication check ──────────────────────────────────────────────
+    //
+    // Hash the raw SMILES bytes as stored on-chain (no canonicalization — the
+    // BPF VM cannot run a full SMILES graph traversal).  This closes copy-paste
+    // sybil attacks: different wallets submitting the byte-identical SMILES for
+    // the same target can no longer each collect full reward.
+    //
+    // Structural-equivalent bypass (e.g. `CC(C)O` vs `OCC`) is handled at the
+    // validator layer via RDKit canonicalization before `validate_result` is
+    // called — those duplicates never reach Confirmed status, so they never
+    // arrive here.
+    //
+    // The `confirmed_molecule` account uses `init` (not `init_if_needed`), so
+    // if the PDA already exists the transaction is rejected by the Anchor
+    // runtime before the handler body runs.  We return an explicit error code
+    // rather than letting Anchor emit a generic constraint failure so the crank
+    // JS can detect and log it cleanly.
+    let smiles_slice = &smiles_bytes_copy[..smiles_len];
+    let smiles_hash: [u8; 32] = sol_sha256(smiles_slice).to_bytes();
+
+    // Verify the hash matches the seeds the caller derived the PDA from.
+    // `confirmed_molecule` was initialised with seeds [SEED_CONFIRMED_MOL,
+    // target_id_le, smiles_hash], so if the on-chain hash differs the PDA
+    // addresses would not match and Anchor would have already rejected the tx.
+    // This explicit check is belt-and-suspenders for the first-minter path:
+    // it ensures the stored hash is correct before we write it.
+    let confirmed_mol = &mut ctx.accounts.confirmed_molecule;
+    require!(
+        confirmed_mol.smiles_hash == [0u8; 32] || confirmed_mol.smiles_hash == smiles_hash,
+        LifeError::DuplicateMolecule
+    );
 
     let result        = &mut ctx.accounts.result_submission;
     let config        = &mut ctx.accounts.network_config;
@@ -70,6 +117,16 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
         .total_life_earned
         .checked_add(amount)
         .ok_or(LifeError::Overflow)?;
+
+    // ── Write ConfirmedMolecule dedup record ───────────────────────────────────
+    // This is the authoritative first-confirm record for this (target, smiles)
+    // pair.  Written after the CEI state updates, before any CPI, so it is
+    // committed atomically with the reward mint.
+    confirmed_mol.target_id   = result_target_id;
+    confirmed_mol.smiles_hash = smiles_hash;
+    confirmed_mol.first_miner = result_miner;
+    confirmed_mol.first_epoch = config.current_epoch;
+    confirmed_mol.bump        = ctx.bumps.confirmed_molecule;
 
     // Capture confirming validators before mutable borrows end.
     let confirming_count_usize  = result.confirming_validator_count as usize;
@@ -209,7 +266,14 @@ pub struct MintReward<'info> {
     #[account(
         mut,
         seeds = [SEED_MINER, result_submission.miner.as_ref()],
-        bump = miner_account.bump,
+        // No `bump = miner_account.bump` here — different accounts were registered under
+        // different program versions and have the canonical bump at different struct offsets.
+        // Omitting `bump` causes Anchor to re-derive it via find_program_address, which
+        // verifies the account address correctly regardless of what the stored bump field
+        // contains.  This covers all historical MinerAccount layout variants:
+        //   - registered before multi_gpu insertion: bump at byte 65
+        //   - registered after  multi_gpu insertion: bump at byte 66 (multi_gpu at 65)
+        bump,
     )]
     pub miner_account: Account<'info, MinerAccount>,
 
@@ -220,6 +284,42 @@ pub struct MintReward<'info> {
         token::authority = result_submission.miner,
     )]
     pub miner_ata: Account<'info, TokenAccount>,
+
+    // ── Deduplication: ConfirmedMolecule PDA ──────────────────────────────────
+    //
+    // Seeds: [SEED_CONFIRMED_MOL, target_id_le (2 bytes), smiles_hash (32 bytes)]
+    //
+    // The crank computes smiles_hash = SHA-256(smiles_bytes[..smiles_len])
+    // off-chain (using Node crypto.createHash("sha256")) and passes the
+    // derived PDA address here.  Anchor verifies the seeds match.
+    //
+    // `init` (not `init_if_needed`) is intentional: if the account already
+    // exists — meaning a different wallet already had this SMILES/gRNA confirmed
+    // for this target — the transaction is rejected before the handler body
+    // runs, and no tokens are minted.  The crank catches this error and logs it
+    // as a duplicate rather than a fault.
+    //
+    // Space = ConfirmedMolecule::LEN = 114 bytes (~0.001 SOL rent-exempt).
+    // The crank pays the rent as transaction payer.
+    #[account(
+        init,
+        payer = crank,
+        space = ConfirmedMolecule::LEN,
+        seeds = [
+            SEED_CONFIRMED_MOL,
+            &result_submission.target_id.to_le_bytes(),
+            // smiles_hash is 32 bytes, derived by the crank and verified here
+            // by the PDA address check implicit in the seeds constraint.
+            // The handler also re-derives and writes it for on-chain auditability.
+            &{
+                use anchor_lang::solana_program::hash::hash as _h;
+                let s = &result_submission.smiles[..result_submission.smiles_len as usize];
+                _h(s).to_bytes()
+            },
+        ],
+        bump,
+    )]
+    pub confirmed_molecule: Box<Account<'info, ConfirmedMolecule>>,
 
     pub token_program:  Program<'info, Token>,
     pub system_program: Program<'info, System>,

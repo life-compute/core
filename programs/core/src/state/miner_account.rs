@@ -2,6 +2,21 @@ use anchor_lang::prelude::*;
 
 /// Per-miner on-chain record.
 /// PDA seeds: [SEED_MINER, miner_pubkey.as_ref()]
+///
+/// On-chain byte layout (98 bytes total):
+///   [  0..  7]  discriminator      (8)
+///   [  8.. 39]  owner              (32)
+///   [ 40.. 47]  total_life_earned  (8)
+///   [ 48.. 55]  molecules_screened (8)
+///   [ 56.. 63]  last_epoch         (8)
+///   [ 64]       is_registered      (1)
+///   [ 65]       bump               (1)  ← canonical PDA bump; must stay at this offset
+///   [ 66]       submission_count   (1)
+///   [ 67.. 74]  submission_epoch   (8)
+///   [ 75.. 97]  _reserved          (23) ← zero padding; field `multi_gpu` was inserted here
+///                                        in a later program version but removed to preserve
+///                                        the layout of accounts registered under the original
+///                                        schema.  Do not reuse these bytes without a migration.
 #[account]
 #[derive(Default)]
 pub struct MinerAccount {
@@ -18,9 +33,6 @@ pub struct MinerAccount {
     pub last_epoch: u64,
 
     pub is_registered: bool,
-
-    /// True if the miner registered with 2+ GPUs.
-    pub multi_gpu: bool,
 
     pub bump: u8,
 
@@ -40,9 +52,8 @@ impl MinerAccount {
         + 8  // molecules_screened
         + 8  // last_epoch
         + 1  // is_registered
-        + 1  // multi_gpu
         + 1  // bump
         + 1  // submission_count
         + 8  // submission_epoch
-        + 22; // padding
+        + 23; // reserved padding — preserves 98-byte account size for pre-existing accounts
 }

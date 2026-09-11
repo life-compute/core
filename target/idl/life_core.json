@@ -395,6 +395,42 @@
           "writable": true
         },
         {
+          "name": "confirmed_molecule",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  114,
+                  109,
+                  101,
+                  100,
+                  95,
+                  109,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "result_submission.target_id",
+                "account": "ResultSubmission"
+              },
+              {
+                "kind": "account",
+                "path": "result_submission.smiles_hash_seed",
+                "account": "ResultSubmission"
+              }
+            ]
+          }
+        },
+        {
           "name": "token_program"
         },
         {
@@ -625,6 +661,19 @@
         221,
         13
       ]
+    },
+    {
+      "name": "ConfirmedMolecule",
+      "discriminator": [
+        212,
+        144,
+        198,
+        153,
+        233,
+        251,
+        185,
+        61
+      ]
     }
   ],
   "errors": [
@@ -692,6 +741,11 @@
       "code": 6012,
       "name": "EpochNotReady",
       "msg": "Epoch not ready to advance"
+    },
+    {
+      "code": 6013,
+      "name": "DuplicateMolecule",
+      "msg": "This SMILES/gRNA has already been confirmed for this target by another wallet \u2014 duplicate submission blocked"
     }
   ],
   "types": [
@@ -1117,6 +1171,39 @@
           {
             "name": "is_active",
             "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfirmedMolecule",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "target_id",
+            "type": "u16"
+          },
+          {
+            "name": "smiles_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "first_miner",
+            "type": "pubkey"
+          },
+          {
+            "name": "first_epoch",
+            "type": "u64"
           },
           {
             "name": "bump",

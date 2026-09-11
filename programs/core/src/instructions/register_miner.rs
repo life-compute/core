@@ -17,7 +17,6 @@ use crate::state::{MinerAccount, NetworkConfig};
 pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
     let current_count = ctx.accounts.network_config.total_miners_registered;
 
-    let is_multi_gpu = false;
     let fee = MINER_REGISTRATION_FEE;
 
     // ── Task 1: paid registration from miner #21 onward ──────────────────────
@@ -60,10 +59,9 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
     miner.owner             = ctx.accounts.miner.key();
     miner.total_life_earned = 0;
     miner.molecules_screened = 0;
-    miner.last_epoch        = 0;
-    miner.is_registered     = true;
-    miner.multi_gpu         = is_multi_gpu;
-    miner.bump              = ctx.bumps.miner_account;
+    miner.last_epoch         = 0;
+    miner.is_registered      = true;
+    miner.bump               = ctx.bumps.miner_account;
 
     emit!(MinerRegistered {
         miner: ctx.accounts.miner.key(),
