@@ -112,3 +112,16 @@ below 21,000,000, rollback is safe — no already-minted supply becomes invalid.
 4. **Validator commission** (`amount/20` in `mint_reward.rs`) untouched per
    instruction — handle on the 4060 rig. Note it now pays 5% of 0.9 rather than
    5% of 25, so validator income drops by the same 27.78x.
+
+## Verification
+
+```bash
+python3 scripts/verify_tokenomics.py   # 61 checks; wraps cargo test + build-sbf
+```
+
+Covers what no single suite does: Rust/Python constant parity, both miner
+tier-selection call sites (evaluated as written via AST), cap/halving absence
+in real source, the retained Layer-2 taper matrix, and the expected 0.945 LIFE
+post-deploy delta for one Hard hit. Mutation-tested — reverting Hard to 25,
+re-adding the `supply_cap` require!, or restoring a literal tier dict each
+fails it (54/61, 58/61, 54/61 respectively).
