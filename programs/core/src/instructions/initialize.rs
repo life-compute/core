@@ -17,11 +17,13 @@ pub fn initialize(
     validation_tolerance: f32,
     initial_validators: Vec<Pubkey>,
 ) -> Result<()> {
-    require!(supply_cap == SUPPLY_CAP_RAW, LifeError::Unauthorized);
-    require!(
-        initial_validators.len() <= 5,
-        LifeError::Unauthorized
-    );
+    // NOTE: `supply_cap` is retained as a parameter and struct field ONLY for
+    // ABI / byte-layout compatibility with already-deployed NetworkConfig
+    // accounts.  It is never enforced.  There is no fixed supply cap: total
+    // supply is `total_minted - total_burned`, a live running figure that rises
+    // only when real verified work mints new $LIFE.  Whatever value is passed
+    // here is inert — do NOT reintroduce a cap check on it.
+    require!(initial_validators.len() <= 5, LifeError::Unauthorized);
 
     let config = &mut ctx.accounts.network_config;
     config.authority = ctx.accounts.authority.key();

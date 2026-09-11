@@ -83,11 +83,10 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
     let target        = &ctx.accounts.target;
     let miner_account = &mut ctx.accounts.miner_account;
 
-    // ── Two-layer halving ──────────────────────────────────────────────────────
+    // ── Flat reward (per-target hit-count taper only) ─────────────────────────
     let base_reward = target.difficulty.base_reward_raw();
     let (amount, supply_tier, hit_tier) =
-        calculate_reward(base_reward, config.total_minted, target.hit_count, config.current_epoch)
-            .ok_or(LifeError::Overflow)?;
+        calculate_reward(base_reward, target.hit_count).ok_or(LifeError::Overflow)?;
 
     // ── 5% validator commission ────────────────────────────────────────────────
     let confirming_count = result.confirming_validator_count as u64;
@@ -104,11 +103,14 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
         .checked_add(total_commission)
         .ok_or(LifeError::Overflow)?;
 
+    // ── Live supply accounting (no cap) ───────────────────────────────────────
+    // There is no supply ceiling.  `total_minted` is the running on-chain truth
+    // of every $LIFE ever created by verified work.  The only guard here is
+    // u64 overflow — not a policy limit.
     let new_total = config
         .total_minted
         .checked_add(total_mint)
         .ok_or(LifeError::Overflow)?;
-    require!(new_total <= config.supply_cap, LifeError::SupplyCapExceeded);
 
     // ── Fix 6-B: CEI — update all state BEFORE any CPI ────────────────────────
     config.total_minted = new_total;

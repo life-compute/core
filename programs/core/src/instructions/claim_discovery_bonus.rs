@@ -16,9 +16,10 @@ pub fn claim_discovery_bonus(ctx: Context<ClaimDiscoveryBonus>) -> Result<()> {
     require!(config.current_week() > leaderboard.week, LifeError::WeekNotClosed);
     require!(!leaderboard.bonus_minted, LifeError::BonusAlreadyMinted);
 
+    // The 100 LIFE weekly discovery bonus is UNCHANGED.  There is no supply
+    // cap to check against — only u64 overflow.
     let amount    = REWARD_DISCOVERY;
     let new_total = config.total_minted.checked_add(amount).ok_or(LifeError::Overflow)?;
-    require!(new_total <= config.supply_cap, LifeError::SupplyCapExceeded);
 
     // ── Fix 6-B: CEI — update all state BEFORE the CPI ────────────────────────
     config.total_minted    = new_total;

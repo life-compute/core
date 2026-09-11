@@ -12,8 +12,12 @@ pub enum LifeError {
     #[msg("Signer is not the winning miner for this discovery bonus")]
     NotTheWinner,
 
-    // ─── Supply cap ─────────────────────────────────────────────────────────
-    #[msg("Minting this reward would exceed the 21,000,000 LIFE supply cap")]
+    // ─── Supply cap (REMOVED — variant retained for error-code stability) ───
+    /// DEPRECATED and UNREACHABLE as of 2026-09.  The fixed 21,000,000 supply
+    /// cap was removed entirely; there is no ceiling on $LIFE.  This variant is
+    /// kept ONLY so the discriminants of every error below it stay unchanged
+    /// for already-deployed clients.  Never return this error.
+    #[msg("Deprecated: there is no $LIFE supply cap")]
     SupplyCapExceeded,
 
     // ─── Target ─────────────────────────────────────────────────────────────

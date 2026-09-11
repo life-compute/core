@@ -50,7 +50,11 @@ pub mod life_core {
     // ── Deployment ────────────────────────────────────────────────────────────
 
     /// One-time setup: creates NetworkConfig + $LIFE SPL mint.
-    /// supply_cap MUST equal 21_000_000 * 10^6 (enforced in handler).
+    ///
+    /// `supply_cap` is accepted for ABI compatibility with already-deployed
+    /// accounts but is NOT enforced and has no effect.  There is no fixed
+    /// supply cap: total supply is `total_minted - total_burned`, a live
+    /// running figure that rises only when real verified work mints new $LIFE.
     pub fn initialize(
         ctx: Context<Initialize>,
         supply_cap: u64,

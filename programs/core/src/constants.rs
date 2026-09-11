@@ -7,8 +7,17 @@ pub const LIFE_DECIMALS: u8 = 6;
 /// 10^6 — one token unit (used to build reward amounts).
 pub const ONE_LIFE: u64 = 1_000_000;
 
-/// Fixed supply cap: 21,000,000 LIFE (raw units).
-pub const SUPPLY_CAP_RAW: u64 = 21_000_000 * ONE_LIFE;
+// ─── Supply model ─────────────────────────────────────────────────────────
+//
+// There is NO fixed supply cap.  Total supply is defined, at every moment, as
+// `total_minted - total_burned`: a live, running figure, not a historical
+// total and not a target.  It rises ONLY when real work is verified and mints
+// new $LIFE through `mint_reward` (or the weekly discovery bonus), at a flat
+// per-tier rate with no time-based reduction schedule.
+//
+// The `NetworkConfig::supply_cap` field is retained as a vestigial no-op for
+// on-chain byte-layout compatibility with already-deployed accounts.  It is
+// no longer read or enforced anywhere.  Do not reintroduce a cap check.
 
 /// Epoch length in slots (~24 h at 400 ms/slot) — mainnet default.
 pub const EPOCH_DURATION_SLOTS: u64 = 216_000;
@@ -29,37 +38,31 @@ pub const VALIDATION_TOLERANCE: f32 = 0.05;
 
 // ─── Reward amounts (raw token units at 6 decimals) ───────────────────────
 
-/// Initial (pre-halving) base rewards per difficulty tier.
-/// These are also the on-chain REWARD_* constants used by base_reward_raw().
-pub const REWARD_EASY:      u64 = ONE_LIFE;            //   1 LIFE
-pub const REWARD_MEDIUM:    u64 = 5  * ONE_LIFE;       //   5 LIFE
-pub const REWARD_HARD:      u64 = 25 * ONE_LIFE;       //  25 LIFE
-pub const REWARD_CRISPR:    u64 = 7  * ONE_LIFE;       //   7 LIFE (gRNA targets)
-pub const REWARD_MRNA:      u64 = 25 * ONE_LIFE;       //  25 LIFE (mRNA silencing)
-pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE;      // 100 LIFE (discovery NFT)
+/// Flat base rewards per difficulty tier.  No halving, no schedule, no decay
+/// over time or supply.  These values are final and are the only emission
+/// control in the protocol.
+///
+/// Rationale (2026-09): at realistic multi-miner scale (~2,000 miners x 3
+/// submissions/epoch) the previous 25/5/1 scale emitted ~157,500 LIFE/epoch,
+/// which would have exhausted the old 21,000,000 cap in well under two days at
+/// the live 6.67-minute epoch length.  The Hard tier was reduced 25 -> 0.9
+/// (a 27.78x cut); every other tier is scaled to preserve sane relativities.
+pub const REWARD_EASY:      u64 = 300_000;             //   0.3   LIFE
+pub const REWARD_MEDIUM:    u64 = 700_000;             //   0.7   LIFE
+pub const REWARD_HARD:      u64 = 900_000;             //   0.9   LIFE
+pub const REWARD_CRISPR:    u64 = 252_000;             //   0.252 LIFE (gRNA targets)
+pub const REWARD_MRNA:      u64 = 900_000;             //   0.9   LIFE (mRNA silencing, always Hard)
+pub const REWARD_DISCOVERY: u64 = 100 * ONE_LIFE;      // 100     LIFE (weekly discovery bonus — UNCHANGED)
+
+/// Flat reference-compound reward (raw units).
+/// Scaled from the previous 3 LIFE flat rate by the same ratio as the Hard
+/// tier reduction: 3.0 x (0.9 / 25) = 0.108 LIFE.
+pub const REWARD_REFERENCE: u64 = 108_000;             //   0.108 LIFE
 
 /// Validator commission reward for confirming a CRISPR submission (raw units).
-pub const VALIDATOR_REWARD_CRISPR: u64 = 7 * ONE_LIFE; //   7 LIFE
-
-// ─── Epoch-based halving schedule ─────────────────────────────────────────
-//
-// Every HALVING_INTERVAL epochs the base reward halves (bit-shift right by 1).
-// At 1 epoch ≈ 6 min on devnet / 24 h on mainnet, 210_000 epochs ≈ 1 year
-// on mainnet (210_000 × 216_000 slots × 0.4 s/slot ÷ 86_400 s/day ÷ 365 ≈ 1 yr).
-//
-// Epoch halvings interact multiplicatively with the existing two-layer halving
-// (supply milestones × per-target hit count).  Minimum reward is always 1 raw
-// unit so rewards never reach zero.
-
-/// Number of epochs between successive halvings of the base reward.
-pub const HALVING_INTERVAL:        u64 = 210_000;
-
-/// Initial base rewards (mirrors REWARD_* but named for clarity in halving code).
-pub const INITIAL_EASY_REWARD:     u64 = ONE_LIFE;       //   1 LIFE
-pub const INITIAL_MEDIUM_REWARD:   u64 = 5  * ONE_LIFE;  //   5 LIFE
-pub const INITIAL_HARD_REWARD:     u64 = 25 * ONE_LIFE;  //  25 LIFE
-pub const INITIAL_CRISPR_REWARD:   u64 = 7  * ONE_LIFE;  //   7 LIFE
-pub const INITIAL_MRNA_REWARD:     u64 = 25 * ONE_LIFE;  //  25 LIFE
+/// Held equal to REWARD_CRISPR so validators cannot out-earn miners on the
+/// same unit of work.
+pub const VALIDATOR_REWARD_CRISPR: u64 = 252_000;      //   0.252 LIFE
 
 // ─── Max sizes ────────────────────────────────────────────────────────────
 
@@ -97,19 +100,25 @@ pub const SEED_CONFIRMED_MOL: &[u8] = b"confirmed_mol";
 // ─── Slots per week (~7 days at 400 ms/slot) ──────────────────────────────
 pub const SLOTS_PER_WEEK: u64 = EPOCH_DURATION_SLOTS * 7; // 1_512_000
 
-// ─── Halving: Layer 1 — Supply milestones (raw units, 6 decimals) ─────────
+// ─── Emission control ─────────────────────────────────────────────────────
+//
+// Halving has been REMOVED ENTIRELY as an emission mechanism (2026-09):
+//
+//   * Layer 0 — epoch-based halving (HALVING_INTERVAL, checked_shr): REMOVED.
+//     Rewards no longer decrease with time.  There is no schedule.
+//
+//   * Layer 1 — supply milestones (HALVING_MILESTONE_1/2/3): REMOVED.
+//     These were defined as fractions of the old 21,000,000 cap.  With no cap
+//     there is no milestone to measure against, and no supply-based reduction.
+//
+// The flat per-tier REWARD_* values above are now the ONLY emission control.
+//
+// Layer 2 (per-target hit count) is deliberately RETAINED below.  It is not a
+// monetary schedule — it encodes scientific maturity: a target that has already
+// been explored 1,000 times yields less new information per additional hit, so
+// its reward tapers.  That taper is a property of the science, not of the token.
 
-/// End of tier 1 (100% rewards): 5,250,000 LIFE mined.
-pub const HALVING_MILESTONE_1: u64 =  5_250_000 * ONE_LIFE;
-
-/// End of tier 2 (50% rewards): 10,500,000 LIFE mined.
-pub const HALVING_MILESTONE_2: u64 = 10_500_000 * ONE_LIFE;
-
-/// End of tier 3 (25% rewards): 15,750,000 LIFE mined.
-/// Tier 4 (12.5%) applies above this threshold until supply cap.
-pub const HALVING_MILESTONE_3: u64 = 15_750_000 * ONE_LIFE;
-
-// ─── Halving: Layer 2 — Per-target hit count thresholds ──────────────────
+// ─── Reward taper: per-target hit count (Layer 2 — RETAINED) ──────────────
 
 /// Below this many confirmed hits per target: 100% of tier reward.
 pub const HALVING_HIT_TIER_1: u64 = 100;
