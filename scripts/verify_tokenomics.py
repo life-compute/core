@@ -8,7 +8,7 @@ Covers the one thing no single canonical suite does: that the Rust program and
 the Python miner agree, and that cap/halving behaviour is genuinely gone from
 the *real* source -- not from a re-implementation of it.
 """
-import ast, re, subprocess, sys
+import ast, os, re, subprocess, sys
 
 CORE  = "/mnt/minos-drive/life-compute-core"
 SRC   = f"{CORE}/programs/core/src"
@@ -162,16 +162,22 @@ run("yarn run lint (prettier, JS/TS -- matches no changed file)",
 run("cargo test -p life-core --lib  [20 tests]",
     "cargo test -p life-core --lib", CORE,
     lambda rc,o: rc == 0 and "20 passed; 0 failed" in o)
-# Assert the ARTIFACT, not a log line: build-sbf always prints a pre-existing
-# stack-offset `Error:` for validate_result (identical on baseline bde8557) and
-# streams "Finished" to stderr, so grepping output is unreliable.
-run("cargo build-sbf -> fresh life_core.so on disk",
-    "rm -f target/deploy/life_core.so && cargo build-sbf >/dev/null 2>&1; "
-    "test -s target/deploy/life_core.so && stat -c%s target/deploy/life_core.so",
-    CORE, lambda rc,o: rc == 0 and int(o.strip() or 0) > 400_000)
 run("py_compile miner_daemon.py",
     "python3 -m py_compile miner_daemon.py", "/mnt/minos-drive/life-compute-miner",
     lambda rc,o: rc == 0)
+
+# Artifact freshness, not a log line: build-sbf always emits a pre-existing
+# stack-offset `Error:` for validate_result (identical on baseline bde8557) and
+# streams "Finished" to stderr, so grepping output is unreliable. Deleting the
+# .so first raced the cargo target-dir lock, so assert mtime instead.
+subprocess.run("cargo build-sbf", cwd=CORE, shell=True, capture_output=True, timeout=900)
+so = f"{CORE}/target/deploy/life_core.so"
+newest_src = max(os.path.getmtime(os.path.join(d, f))
+                 for d, _, fs in os.walk(SRC) for f in fs if f.endswith(".rs"))
+chk("cargo build-sbf -> life_core.so newer than newest .rs",
+    os.path.exists(so) and os.path.getsize(so) > 400_000
+    and os.path.getmtime(so) >= newest_src,
+    f"{os.path.getsize(so):,} bytes" if os.path.exists(so) else "MISSING")
 
 print(f"\n{'='*64}\nAD-HOC VERIFICATION: {checks-len(fails)}/{checks} checks passed")
 if fails:
