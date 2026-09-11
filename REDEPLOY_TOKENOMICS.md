@@ -105,10 +105,55 @@ below 21,000,000, rollback is safe — no already-minted supply becomes invalid.
    with "freely tradeable". Left untouched — revoking is irreversible.
 2. **Program-ID keypair is gitignored** and exists only at
    `target/deploy/life_core-keypair.json` on this rig. Back it up off-rig.
-3. **IDL is stale.** `life_core.json` in the miner repo still describes the old
-   `calculate_reward` shape. The `idl-build` failure is pre-existing and blocks
-   regeneration; the miner does not depend on the IDL for reward math, but any
-   JS client that does should be checked.
+3. **IDL is stale and cannot currently be regenerated.** `life_core.json` in the
+   miner repo still describes the old `calculate_reward` shape and the old
+   `"Supply cap exceeded"` error message.
+
+   Root cause (diagnosed 2026-09-11, **pre-existing — identical on baseline
+   `bde8557`**): `anchor build`'s separate `idl-build` pass fails with 23
+   `AnchorSerialize`/`create_type` errors because **three borsh versions
+   resolve into the graph at once** — `0.9.3`, `0.10.4`, and `1.8.0` — while
+   Anchor 0.30.1's `idl-build` expects `0.10.x`. The trigger is two duplicate
+   crates.io registry indexes on this rig, each carrying its own
+   `anchor-lang-0.30.1`:
+
+   ```
+   /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anchor-lang-0.30.1
+   /root/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anchor-lang-0.30.1
+   ```
+
+   Attempted and ruled out (in an isolated worktree; main tree never touched):
+   - pinning `borsh 1.8.0 -> 1.5.1` — still 23 errors
+   - `skip-lint = true` in `Anchor.toml` — still 23 errors
+   - a `target/idl/life_core.json` that *appears* during these runs is NOT
+     trustworthy: it shows 11 instructions (live program has 13) and the old
+     error message. Do not ship it.
+
+   This is a toolchain/registry-cache issue, not a source issue: `cargo test`
+   (20/20) and `cargo build-sbf` both pass, and the deployable `.so` is
+   unaffected. **Use `cargo build-sbf`, never `anchor build`, for deploys.**
+
+   Likely fix, to be done deliberately and off the critical path:
+   `rm -rf ~/.cargo/registry && cargo clean && cargo generate-lockfile`, or
+   pin the toolchain via `[toolchain] anchor_version` with a matching CLI.
+
+   **Does the stale IDL block the deploy? No — verified, not assumed.**
+   `life_mint_reward.js` (the live mint crank) *does* load
+   `target/idl/life_core.json` and construct `new anchor.Program(idl, provider)`,
+   so a wire-incompatible IDL would break minting. It is compatible:
+
+   | | baseline `bde8557` | now |
+   |---|---|---|
+   | `mint_reward` args | `[]` | `[]` |
+   | `MintReward` accounts | 11 (crank … system_program) | **identical 11** |
+   | `pub fn mint_reward` sig | `Context<MintReward>` | **unchanged** |
+
+   Only the handler *body* changed (cap check removed, `calculate_reward`
+   arity). Nothing crossing the instruction boundary moved, so the existing
+   IDL still encodes valid transactions and the crank keeps working after the
+   upgrade. The stale parts are cosmetic: the `"Supply cap exceeded"` error
+   message and two missing instruction entries (11 vs the live 13, from
+   `set_tolerance` / `recount_confirmations` predating the last IDL build).
 4. **Validator commission** (`amount/20` in `mint_reward.rs`) untouched per
    instruction — handle on the 4060 rig. Note it now pays 5% of 0.9 rather than
    5% of 25, so validator income drops by the same 27.78x.

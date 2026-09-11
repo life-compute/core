@@ -141,7 +141,18 @@ for lineno, expr in exprs:
 chk("no literal tier dict remains in miner",
     not re.search(r"\{\s*1\s*:\s*[\d.]+\s*,\s*2\s*:", open(MINER).read()))
 
-print("\n== 8. Canonical suites ==")
+print("\n== 8. mint_reward ABI stable (live crank builds txs from the stale IDL) ==")
+blk = mr[mr.index("pub struct MintReward"):]
+accts = re.findall(r"pub (\w+):", blk)
+chk("MintReward accounts unchanged (11, in order)",
+    accts == ["crank","network_config","life_mint","mint_authority","result_submission",
+              "target","miner_account","miner_ata","confirmed_molecule",
+              "token_program","system_program"], f"{len(accts)} accounts")
+chk("mint_reward still zero-arg",
+    re.search(r"pub fn mint_reward<'info>\(ctx: Context<[^)]*MintReward<'info>>\) -> Result<\(\)>",
+              allrs["lib.rs"]) is not None)
+
+print("\n== 9. Canonical suites ==")
 def run(label, cmd, cwd, ok):
     p = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, timeout=900)
     out = p.stdout + p.stderr
