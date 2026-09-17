@@ -130,10 +130,21 @@ function log(...args) {
       const smilesStr = Buffer.from(smilesArr.slice(0, smilesLen)).toString(
         "utf8",
       );
+      // NOTE: the resultSubmission PDA is seeded by (epoch, miner, seq) only —
+      // targetId is NOT part of the seeds. So this slot may already hold a
+      // submission for a DIFFERENT target than the one we were asked to submit.
+      // Log both ids so a slot collision reads as a collision rather than
+      // looking like a target-type routing bug.
+      const decodedTargetId = existing.targetId ?? existing.target_id;
+      const collision = Number(decodedTargetId) !== Number(TARGET_ID_NUM);
       log(
         "existing resultSubmission:",
         "epoch=" + existing.epoch?.toString(),
-        "targetId=" + (existing.targetId ?? existing.target_id),
+        "requestedTargetId=" + TARGET_ID_NUM,
+        "targetId=" + decodedTargetId,
+        collision
+          ? "SLOT_COLLISION=yes (seq slot already used by another target)"
+          : "SLOT_COLLISION=no",
         "status=" + JSON.stringify(existing.status),
         "validationCount=" +
           (existing.validationCount ?? existing.validation_count),
@@ -240,6 +251,55 @@ function log(...args) {
   // ── Assign job if not yet assigned for this epoch ─────────────────────────
   const jobInfo = await conn.getAccountInfo(jobPda);
   log("jobAssignment on-chain:", jobInfo !== null ? "YES" : "NO (will assign)");
+
+  // GUARD: the jobAssignment PDA is seeded by (epoch, miner, seq) ONLY —
+  // target_id is NOT in the seeds, and submit_result.rs does
+  // `result.target_id = job.target_id`. So an unfulfilled job PDA left behind
+  // by an earlier target this epoch (e.g. assignJob landed, submitResult died
+  // on a 429) will silently stamp ITS target_id onto our payload. Verify the
+  // existing job actually belongs to the target we were asked to submit.
+  if (jobInfo !== null) {
+    try {
+      const job = await program.account.jobAssignment.fetch(jobPda);
+      const jobTargetId = Number(job.targetId ?? job.target_id);
+      const jobFulfilled = job.isFulfilled ?? job.is_fulfilled;
+      if (jobTargetId !== Number(TARGET_ID_NUM) || jobFulfilled) {
+        log(
+          "JOB_MISMATCH: existing job targetId=" +
+            jobTargetId +
+            " requestedTargetId=" +
+            TARGET_ID_NUM +
+            " isFulfilled=" +
+            jobFulfilled +
+            " — refusing to submit into another target's job slot; advancing seq",
+        );
+        process.stdout.write(
+          JSON.stringify({
+            status: "already_submitted",
+            reason: "job_target_mismatch",
+            jobTargetId,
+            requestedTargetId: Number(TARGET_ID_NUM),
+            epoch: epoch.toString(),
+          }) + "\n",
+        );
+        process.exit(0);
+      }
+    } catch (jobDecodeErr) {
+      log(
+        "WARN: could not decode existing jobAssignment:",
+        jobDecodeErr.message,
+      );
+      process.stdout.write(
+        JSON.stringify({
+          status: "already_submitted",
+          reason: "job_undecodable",
+          epoch: epoch.toString(),
+        }) + "\n",
+      );
+      process.exit(0);
+    }
+  }
+
   if (jobInfo === null) {
     // target_id is u16 in Rust → seeds use 2-byte little-endian (target_id.to_le_bytes())
     const targetIdBuf = Buffer.alloc(2);
