@@ -345,6 +345,24 @@ function log(...args) {
   }
 
   // ── Submit result ─────────────────────────────────────────────────────────
+  // gpuModel: null-padded on-chain to 30 bytes. Truncate client-side rather
+  // than letting the program reject the whole submission with GpuModelTooLong —
+  // GPU identity is informational, never worth failing a real result over.
+  const GPU_MODEL_MAX = 30;
+  let gpuModel = args.gpuModel || "";
+  if (Buffer.byteLength(gpuModel, "utf8") > GPU_MODEL_MAX) {
+    const truncated = Buffer.from(gpuModel, "utf8")
+      .subarray(0, GPU_MODEL_MAX)
+      .toString("utf8");
+    log(
+      "gpuModel too long (" +
+        Buffer.byteLength(gpuModel, "utf8") +
+        " bytes) — truncating to: " +
+        truncated,
+    );
+    gpuModel = truncated;
+  }
+  log("gpuModel:", gpuModel || "(empty — detection failed or unavailable)");
   log(
     "submitting: smiles=" +
       args.smiles.substring(0, 60) +
@@ -356,7 +374,7 @@ function log(...args) {
   let submitTx;
   try {
     submitTx = await program.methods
-      .submitResult(args.smiles, args.affinity)
+      .submitResult(args.smiles, args.affinity, gpuModel)
       .accounts({
         miner: minerKp.publicKey,
         networkConfig: networkConfigPda,
@@ -478,6 +496,7 @@ function log(...args) {
       tx: submitTx,
       epoch: epoch.toString(),
       moleculeType: args.moleculeType || "protein",
+      gpuModel: gpuModel,
       resultPda: resultPda.toBase58(),
       seq: SEQ,
     }) + "\n",

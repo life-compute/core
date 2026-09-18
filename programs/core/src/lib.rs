@@ -104,8 +104,9 @@ pub mod life_core {
         ctx: Context<SubmitResult>,
         smiles: String,
         claimed_affinity: f32,
+        gpu_model: String,
     ) -> Result<()> {
-        instructions::submit_result::submit_result(ctx, smiles, claimed_affinity)
+        instructions::submit_result::submit_result(ctx, smiles, claimed_affinity, gpu_model)
     }
 
     // ── Validators ────────────────────────────────────────────────────────────

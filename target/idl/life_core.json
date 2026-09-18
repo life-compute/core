@@ -290,6 +290,10 @@
         {
           "name": "claimed_affinity",
           "type": "f32"
+        },
+        {
+          "name": "gpu_model",
+          "type": "string"
         }
       ]
     },
@@ -1038,6 +1042,15 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "gpu_model",
+            "type": {
+              "array": [
+                "u8",
+                30
+              ]
+            }
           }
         ]
       }

@@ -10,9 +10,14 @@ pub fn submit_result(
     ctx: Context<SubmitResult>,
     smiles: String,
     claimed_affinity: f32,
+    gpu_model: String,
 ) -> Result<()> {
     require!(smiles.len() <= MAX_SMILES_LEN, LifeError::SmilesTooLong);
     require!(claimed_affinity < 0.0, LifeError::InvalidAffinityScore);
+    require!(
+        gpu_model.len() <= ResultSubmission::MAX_GPU_MODEL_LEN,
+        LifeError::GpuModelTooLong
+    );
 
     let config = &ctx.accounts.network_config;
     let job = &mut ctx.accounts.job_assignment;
@@ -59,6 +64,14 @@ pub fn submit_result(
     result.seq = job.seq;
     result.bump = ctx.bumps.result_submission;
 
+    // GPU model identity — informational only, consumed off-chain by the
+    // per-GPU-model bias correction system. Null-padded, never read by any
+    // scoring / confirm-reject / reward path.
+    let gpu_bytes = gpu_model.as_bytes();
+    let mut gpu_arr = [0u8; 30];
+    gpu_arr[..gpu_bytes.len()].copy_from_slice(gpu_bytes);
+    result.gpu_model = gpu_arr;
+
     // Mark the job slot as used
     job.is_fulfilled = true;
 
@@ -78,6 +91,7 @@ pub fn submit_result(
         epoch,
         smiles,
         claimed_affinity,
+        gpu_model,
         slot: clock.slot as i64,
     });
 

@@ -60,6 +60,18 @@ pub struct ResultSubmission {
     /// Submission sequence within the epoch (0, 1, 2), mirrors job_assignment.seq.
     /// Part of the PDA seeds: [SEED_RESULT, epoch, miner, &[seq]].
     pub seq: u8,
+
+    /// GPU model name that produced `claimed_affinity`, as reported by
+    /// `torch.cuda.get_device_name()` on the miner. Null-padded ASCII, same
+    /// convention as `TargetRegistered.uniprot_id`.
+    ///
+    /// Carved out of the former 31-byte padding block so `LEN` stays at 938 and
+    /// pre-upgrade accounts remain deserializable (their padding was already
+    /// zeroed, which decodes as the empty string).
+    ///
+    /// Purely informational: fed to the per-GPU-model bias correction system.
+    /// No instruction reads this field for scoring, confirm/reject, or rewards.
+    pub gpu_model: [u8; 30],
 }
 
 impl ResultSubmission {
@@ -81,7 +93,22 @@ impl ResultSubmission {
         + 1                           // confirming_validator_count
         + 1                           // bump
         + 1                           // seq
-        + 31;                         // padding for future fields
+        + 30                          // gpu_model (null-padded ASCII)
+        + 1;                          // padding for future fields
+
+    /// Maximum bytes storable in `gpu_model`.
+    pub const MAX_GPU_MODEL_LEN: usize = 30;
+
+    /// Return `gpu_model` as a &str, trimming null padding.
+    /// Empty string for pre-upgrade accounts (padding was zeroed).
+    pub fn gpu_model_str(&self) -> &str {
+        let len = self
+            .gpu_model
+            .iter()
+            .position(|&b| b == 0)
+            .unwrap_or(Self::MAX_GPU_MODEL_LEN);
+        std::str::from_utf8(&self.gpu_model[..len]).unwrap_or("")
+    }
 
     /// Return the SMILES as a &str slice (lossy if non-UTF8, but SMILES is ASCII).
     pub fn smiles_str(&self) -> &str {

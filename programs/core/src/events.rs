@@ -35,6 +35,9 @@ pub struct ResultSubmitted {
     pub smiles: String,
     /// Miner's claimed ΔG affinity score (kcal/mol; negative = better).
     pub claimed_affinity: f32,
+    /// GPU model that produced `claimed_affinity` (torch.cuda.get_device_name()).
+    /// Informational: consumed by the per-GPU-model bias correction system.
+    pub gpu_model: String,
     pub slot: i64,
 }
 

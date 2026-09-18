@@ -117,4 +117,11 @@ pub enum LifeError {
     // ─── Arithmetic ──────────────────────────────────────────────────────────
     #[msg("Arithmetic overflow")]
     Overflow,
+
+    // ─── GPU identity ────────────────────────────────────────────────────────
+    // Appended at the END of the enum on purpose: anchor assigns error codes
+    // sequentially from 6000, so inserting mid-list would renumber every
+    // existing error and break clients matching on codes.
+    #[msg("GPU model name exceeds the 30-byte limit")]
+    GpuModelTooLong,
 }
