@@ -10,19 +10,45 @@ const anchor = require("@coral-xyz/anchor");
 const { PublicKey, Keypair, Connection } = require("@solana/web3.js");
 const fs = require("fs");
 
+// ── RPC endpoint resolution: reads ~/.helius.env directly; falls back to public devnet ──
+// Never accepts rpc from caller args — key stays off the command line.
+function _readHeliusKey() {
+  const p = require("os").homedir() + "/.helius.env";
+  try {
+    for (const line of require("fs").readFileSync(p, "utf8").split("\n")) {
+      if (line.startsWith("HELIUS_API_KEY=")) {
+        return line.slice("HELIUS_API_KEY=".length).trim();
+      }
+    }
+  } catch { /* file absent or unreadable */ }
+  return null;
+}
+let _RPC_LABEL;
+const _RPC_URL = (() => {
+  const k = _readHeliusKey();
+  if (k) {
+    _RPC_LABEL = "helius-devnet";
+    return `https://devnet.helius-rpc.com/?api-key=${k}`;
+  }
+  process.stderr.write("[life_submit] WARNING: ~/.helius.env missing — RPC: public-devnet (no key file)\n");
+  _RPC_LABEL = "public-devnet (no key file)";
+  return "https://api.devnet.solana.com";
+})();
+
 function log(...args) {
   process.stderr.write("[life_submit] " + args.join(" ") + "\n");
 }
 
 (async () => {
   const args = JSON.parse(process.argv[2]);
-  log("rpc:", args.rpc);
+  const _rpcHost = new URL(_RPC_URL).hostname;
+  log("rpc:", _RPC_LABEL, _rpcHost);
   log("programId:", args.programId);
   log("targetIdNum:", args.targetIdNum);
   log("moleculeType:", args.moleculeType || "protein");
   log("boltzSeed:", args.boltzSeed ?? "n/a");
 
-  const conn = new Connection(args.rpc, "confirmed");
+  const conn = new Connection(_RPC_URL, "confirmed");
 
   const authKp = Keypair.fromSecretKey(
     Buffer.from(JSON.parse(fs.readFileSync(args.authKeypair))),

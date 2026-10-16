@@ -13,6 +13,13 @@
 DELAY="${MINT_CRANK_DELAY:-120}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Report RPC label from helius.env (no key printed)
+if grep -q "HELIUS_API_KEY=" "$HOME/.helius.env" 2>/dev/null; then
+  echo "[crank-loop] RPC: helius-devnet"
+else
+  echo "[crank-loop] WARNING: ~/.helius.env missing — RPC: public-devnet (no key file)"
+fi
+
 echo "[crank-loop] starting — pass interval=${DELAY}s  dir=${SCRIPT_DIR}"
 
 while true; do
