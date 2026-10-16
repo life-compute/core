@@ -16,7 +16,7 @@ function log(...args) {
 
 (async () => {
   const args = JSON.parse(process.argv[2]);
-  log("rpc:", args.rpc);
+  log("rpc:", args.rpc.replace(/api-key=[^&]+/, "api-key=<redacted>"));
   log("programId:", args.programId);
   log("targetIdNum:", args.targetIdNum);
   log("moleculeType:", args.moleculeType || "protein");

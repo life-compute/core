@@ -52,8 +52,36 @@ const PROGRAM_ID = new PublicKey(
   process.env.LIFE_PROGRAM_ID ||
     "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
 );
-const RPC_URL =
-  process.env.SOLANA_RPC || "https://api.devnet.solana.com";
+
+// RPC endpoint resolution: SOLANA_RPC env-var wins; falls back to ~/.helius.env; then public devnet.
+function _readHeliusKey() {
+  const p = require("os").homedir() + "/.helius.env";
+  try {
+    for (const line of require("fs").readFileSync(p, "utf8").split("\n")) {
+      if (line.startsWith("HELIUS_API_KEY=")) {
+        return line.slice("HELIUS_API_KEY=".length).trim();
+      }
+    }
+  } catch { /* file absent or unreadable */ }
+  return null;
+}
+let _RPC_LABEL;
+const RPC_URL = (() => {
+  if (process.env.SOLANA_RPC) {
+    _RPC_LABEL = "RPC: env-override";
+    return process.env.SOLANA_RPC;
+  }
+  const k = _readHeliusKey();
+  if (k) {
+    _RPC_LABEL = "RPC: helius-devnet";
+    return `https://devnet.helius-rpc.com/?api-key=${k}`;
+  }
+  console.warn("[crank] WARNING: ~/.helius.env missing or unreadable — RPC: public-devnet (no key file)");
+  _RPC_LABEL = "RPC: public-devnet (no key file)";
+  return "https://api.devnet.solana.com";
+})();
+console.log(`[crank] ${_RPC_LABEL}`);
+
 const IDL_PATH = path.join(__dirname, "target/idl/life_core.json");
 const CRANK_KEYPAIR =
   process.env.CRANK_KEYPAIR || "/tmp/life-compute-dev-keypair.json";
@@ -157,7 +185,7 @@ async function main() {
 
   console.log("LIFE Compute — mint_reward crank");
   console.log("  Program:", PROGRAM_ID.toBase58());
-  console.log("  RPC:", RPC_URL);
+  console.log(`  ${_RPC_LABEL}`);
   if (DRY_RUN) console.log("  DRY-RUN: no transactions will be sent");
 
   const crankKp = Keypair.fromSecretKey(
