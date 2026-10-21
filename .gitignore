@@ -9,3 +9,11 @@ test-ledger
 # python bytecode from scripts/
 __pycache__/
 *.pyc
+
+# Secret files — never commit
+.env
+*.env
+*keypair*.json
+*.seed
+id.json
+wallet*.json
