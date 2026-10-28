@@ -159,4 +159,14 @@ pub enum LifeError {
 
     #[msg("Stake has already been returned")]
     AlreadyUnstaked,
+
+    // ─── Launch feature gates ─────────────────────────────────────────────────────
+    /// Under the  feature mint_reward is disabled; use payout_batch only.
+    /// Error code stable: appended at end to preserve all prior discriminants.
+    #[msg("mint_reward is disabled in launch build; only payout_batch may mint LIFE")]
+    LegacyMintDisabled,
+
+    /// Under the  feature claim_discovery_bonus is disabled.
+    #[msg("claim_discovery_bonus is disabled in launch build; weekly discovery bonus removed")]
+    DiscoveryBonusDisabled,
 }

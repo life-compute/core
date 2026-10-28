@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+life_core = "BU7WVCvy9CqypB7Hqhw6RJakAeSieVsWNapytQpFgi18"
 
 [programs.devnet]
 life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
@@ -15,7 +15,7 @@ life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Devnet"
+cluster = "Localnet"
 wallet = "/tmp/life-compute-dev-keypair.json"
 
 [scripts]

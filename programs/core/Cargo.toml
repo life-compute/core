@@ -9,7 +9,14 @@ crate-type = ["cdylib", "lib"]
 name = "life_core"
 
 [features]
-default = []
+# launch = enabled by default for mainnet and the devnet trial.
+# Under launch: payout_batch is the ONLY instruction that can mint LIFE.
+# mint_reward returns LegacyMintDisabled; claim_discovery_bonus returns DiscoveryBonusDisabled.
+# legacy = old behaviour; used ONLY by tests of the old logic (mint_reward + claim_discovery_bonus).
+# Exactly one of launch or legacy should be active at build time.
+default = ["launch"]
+launch = []
+legacy = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []

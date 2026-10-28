@@ -30,7 +30,18 @@ use crate::state::{ConfirmedMolecule, MinerAccount, NetworkConfig, ResultStatus,
 ///
 /// If confirming_validator_count == 0 or per-validator share rounds to 0,
 /// no commission is minted and the instruction still succeeds.
+#[cfg_attr(feature = "launch", allow(unused_variables))]
 pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) -> Result<()> {
+    // ── Launch gate ────────────────────────────────────────────────────────────
+    // Under the `launch` feature, payout_batch is the sole mint pathway.
+    // Any caller holding the old crank key, a validator key, or any other
+    // account is unconditionally rejected here; there is nothing else to check.
+    #[cfg(feature = "launch")]
+    return Err(error!(crate::errors::LifeError::LegacyMintDisabled));
+
+    // ── Legacy path (only compiled when `legacy` feature is active) ────────────
+    #[cfg(not(feature = "launch"))]
+    {
     let result_pda_key = ctx.accounts.result_submission.key();
     let result_miner;
     let result_target_id;
@@ -224,6 +235,7 @@ pub fn mint_reward<'info>(ctx: Context<'_, '_, '_, 'info, MintReward<'info>>) ->
 
     Ok(())
 }
+    } // end #[cfg(not(feature = "launch"))]
 
 #[derive(Accounts)]
 pub struct MintReward<'info> {

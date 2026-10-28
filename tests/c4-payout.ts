@@ -101,11 +101,11 @@ describe("c4_payout", () => {
   const program = anchor.workspace.LifeCore as Program<any>;
   const auth = provider.wallet as anchor.Wallet;
 
-  // Two signers for payout multisig
-  const signer1 = Keypair.generate();
-  const signer2 = Keypair.generate();
-  const miner1 = Keypair.generate();
-  const val1 = Keypair.generate();
+  // Two signers for payout multisig — deterministic so launch-gate.ts shares the same keys
+  const signer1 = Keypair.fromSeed(Buffer.alloc(32, 0x01));
+  const signer2 = Keypair.fromSeed(Buffer.alloc(32, 0x02));
+  const miner1 = Keypair.fromSeed(Buffer.alloc(32, 0x03));
+  const val1 = Keypair.fromSeed(Buffer.alloc(32, 0x04));
 
   let ncPda: PublicKey,
     mintPda: PublicKey,

@@ -7,7 +7,19 @@ use crate::state::{MinerAccount, NetworkConfig, WeeklyLeaderboard};
 
 /// Miner claims their 100 LIFE discovery bonus for topping a target leaderboard
 /// in a closed week. Only the winning miner may call this.
+#[cfg_attr(feature = "launch", allow(unused_variables))]
 pub fn claim_discovery_bonus(ctx: Context<ClaimDiscoveryBonus>) -> Result<()> {
+    // ── Launch gate ────────────────────────────────────────────────────────────
+    // Weekly discovery bonus is removed from the launch build.
+    // Accounts are still decoded (ClaimDiscoveryBonus struct remains) so that
+    // old client code that passes these accounts does not get a layout error —
+    // it gets a clear DiscoveryBonusDisabled instead.
+    #[cfg(feature = "launch")]
+    return Err(error!(crate::errors::LifeError::DiscoveryBonusDisabled));
+
+    // ── Legacy path ────────────────────────────────────────────────────────────
+    #[cfg(not(feature = "launch"))]
+    {
     let config      = &mut ctx.accounts.network_config;
     let leaderboard = &mut ctx.accounts.weekly_leaderboard;
     let miner_account = &mut ctx.accounts.miner_account;
@@ -57,6 +69,7 @@ pub fn claim_discovery_bonus(ctx: Context<ClaimDiscoveryBonus>) -> Result<()> {
 
     Ok(())
 }
+    } // end #[cfg(not(feature = "launch"))]
 
 #[derive(Accounts)]
 pub struct ClaimDiscoveryBonus<'info> {
