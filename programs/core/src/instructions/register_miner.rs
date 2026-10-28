@@ -10,14 +10,17 @@ use crate::state::{MinerAccount, NetworkConfig};
 /// Fee schedule:
 ///   • Miners 1–FREE_MINER_SLOTS (first 20): register free.
 ///   • Miner FREE_MINER_SLOTS+1 onwards: pays MINER_REGISTRATION_FEE (0.033 SOL)
-///     directly to the foundation wallet.
+///     directly to REGISTRATION_FEE_RECIPIENT.
 ///
-/// On top of any fee, REGISTRATION_STAKE (0.01 SOL) is locked into the miner's
-/// PDA as an anti-Sybil measure.
+/// C4 stake: REGISTRATION_STAKE_C4 (0.05 SOL) is locked into the miner's PDA.
+/// Recovered via `unstake_miner` when leaving in good standing after the
+/// UNSTAKE_HOLDBACK_SLOTS holdback has been served.
+///
+/// Fee-recipient address (build-time constant, printed in initialize_payout_config log):
+///   devnet/test:  8NQtHtcA839wPSfphsAuPCbfCajvFY5tmcWXKWsk1L84
+///   mainnet:      AGKvdA3ipuyparVHQi4n7XAhzPsSU4ukp3u7dUg2z3wm
 pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
     let current_count = ctx.accounts.network_config.total_miners_registered;
-
-    let fee = MINER_REGISTRATION_FEE;
 
     // ── Task 1: paid registration from miner #21 onward ──────────────────────
     if current_count >= FREE_MINER_SLOTS {
@@ -26,19 +29,14 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
                 ctx.accounts.system_program.to_account_info(),
                 system_program::Transfer {
                     from: ctx.accounts.miner.to_account_info(),
-                    to:   ctx.accounts.foundation.to_account_info(),
+                    to:   ctx.accounts.fee_recipient.to_account_info(),
                 },
             ),
-            fee,
+            MINER_REGISTRATION_FEE,
         )?;
     }
 
-    // ── Anti-Sybil stake into the MinerAccount PDA ───────────────────────────
-    require!(
-        ctx.accounts.miner.lamports() >= REGISTRATION_STAKE,
-        LifeError::InsufficientStake
-    );
-
+    // ── Anti-Sybil stake into the MinerAccount PDA (C4: 0.05 SOL) ────────────
     system_program::transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -47,7 +45,7 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
                 to:   ctx.accounts.miner_account.to_account_info(),
             },
         ),
-        REGISTRATION_STAKE,
+        REGISTRATION_STAKE_C4,
     )?;
 
     // ── Increment global miner counter ────────────────────────────────────────
@@ -55,17 +53,25 @@ pub fn register_miner(ctx: Context<RegisterMiner>) -> Result<()> {
         .checked_add(1)
         .ok_or(LifeError::Overflow)?;
 
+    let clock = Clock::get()?;
     let miner = &mut ctx.accounts.miner_account;
-    miner.owner             = ctx.accounts.miner.key();
-    miner.total_life_earned = 0;
-    miner.molecules_screened = 0;
-    miner.last_epoch         = 0;
-    miner.is_registered      = true;
-    miner.bump               = ctx.bumps.miner_account;
+    miner.owner                  = ctx.accounts.miner.key();
+    miner.total_life_earned      = 0;
+    miner.molecules_screened     = 0;
+    miner.last_epoch             = 0;
+    miner.is_registered          = true;
+    miner.bump                   = ctx.bumps.miner_account;
+    miner.stake_returned         = false;
+    miner.failed_verification    = false;
+    miner.open_dispute           = false;
+    // Holdback: stake withdrawable after UNSTAKE_HOLDBACK_SLOTS from registration.
+    miner.stake_locked_until_slot = clock.slot
+        .checked_add(UNSTAKE_HOLDBACK_SLOTS)
+        .unwrap_or(u64::MAX);
 
     emit!(MinerRegistered {
         miner: ctx.accounts.miner.key(),
-        slot:  Clock::get()?.slot as i64,
+        slot:  clock.slot as i64,
     });
 
     Ok(())
@@ -93,14 +99,16 @@ pub struct RegisterMiner<'info> {
     )]
     pub network_config: Account<'info, NetworkConfig>,
 
-    /// Foundation wallet — receives registration fee from miner #21+.
-    /// Verified against the hardcoded FOUNDATION_WALLET constant.
+    /// Fee recipient for miner #21+.
+    /// Verified against REGISTRATION_FEE_RECIPIENT (cluster-specific build constant).
+    /// devnet/test: 8NQtHtcA839wPSfphsAuPCbfCajvFY5tmcWXKWsk1L84
+    /// mainnet:     AGKvdA3ipuyparVHQi4n7XAhzPsSU4ukp3u7dUg2z3wm
     #[account(
         mut,
-        constraint = foundation.key() == FOUNDATION_WALLET @ LifeError::Unauthorized,
+        constraint = fee_recipient.key() == REGISTRATION_FEE_RECIPIENT @ LifeError::Unauthorized,
     )]
-    /// CHECK: externally-owned foundation wallet; no data expected.
-    pub foundation: UncheckedAccount<'info>,
+    /// CHECK: externally-owned wallet; no data expected.
+    pub fee_recipient: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }

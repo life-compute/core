@@ -147,10 +147,69 @@ pub const MULTI_GPU_REGISTRATION_FEE: u64 = 100_000_000; // lamports
 /// the foundation wallet.
 pub const VALIDATOR_REGISTRATION_FEE: u64 = 50_000_000; // lamports
 
-/// Foundation wallet — direct recipient for all registration fees.
-/// No treasury PDA; SOL goes straight here.
-/// Address: 2jVdMx7fb88txbG6YoZzC7kT4Tq8rJDaWrNgbZ3ZnqCb
-pub const FOUNDATION_WALLET: Pubkey = Pubkey::new_from_array([
-    25, 190, 115, 16, 56, 60, 32, 33, 150, 48, 115, 24, 20, 52, 120, 37,
-    90, 48, 193, 57, 78, 91, 108, 23, 56, 249, 224, 237, 226, 242, 177, 168,
+/// Registration-fee recipient — a single build-time constant that differs
+/// by cluster so the same source can target devnet/test or mainnet without
+/// any runtime switch.
+///
+/// Devnet / localnet / test builds (default feature set):
+///   8NQtHtcA839wPSfphsAuPCbfCajvFY5tmcWXKWsk1L84
+/// Mainnet build (feature "mainnet"):
+///   AGKvdA3ipuyparVHQi4n7XAhzPsSU4ukp3u7dUg2z3wm
+///
+/// Every build prints this address in the program's startup log so you can
+/// compare it character by character against the expected value.
+///
+/// Users of this constant:
+///   1. `register_miner`    — fee from miner #21+   → REGISTRATION_FEE_RECIPIENT
+///   2. `register_validator`— validator fee          → REGISTRATION_FEE_RECIPIENT
+///
+/// The old FOUNDATION_WALLET constant (2jVdMx7…) is replaced by this one.
+/// It remains defined below only as a compatibility alias used in tests that
+/// have already been written against that address; do NOT introduce new uses.
+#[cfg(not(feature = "mainnet"))]
+pub const REGISTRATION_FEE_RECIPIENT: Pubkey = Pubkey::new_from_array([
+    // 8NQtHtcA839wPSfphsAuPCbfCajvFY5tmcWXKWsk1L84
+    109, 126, 2, 246, 136, 111, 99, 133, 47, 54, 226, 11, 234, 193, 186, 41,
+    208, 20, 130, 152, 124, 44, 247, 195, 13, 154, 64, 24, 243, 116, 68, 117,
 ]);
+
+#[cfg(feature = "mainnet")]
+pub const REGISTRATION_FEE_RECIPIENT: Pubkey = Pubkey::new_from_array([
+    // AGKvdA3ipuyparVHQi4n7XAhzPsSU4ukp3u7dUg2z3wm
+    137, 166, 74, 226, 151, 242, 84, 175, 202, 215, 45, 185, 10, 110, 73, 199,
+    38, 137, 79, 44, 221, 253, 227, 42, 244, 220, 115, 23, 152, 253, 82, 200,
+]);
+
+/// Legacy alias — kept so old tests that still reference FOUNDATION_WALLET
+/// compile without changes.  Points to the same cluster-appropriate address.
+pub use REGISTRATION_FEE_RECIPIENT as FOUNDATION_WALLET;
+
+// ─── C4: Payout / coordinator constants ───────────────────────────────────────
+
+/// Maximum LIFE raw units mintable per single `payout_batch` call (5,000 LIFE).
+pub const CAP_PER_BATCH: u64 = 5_000 * ONE_LIFE;
+
+/// Maximum LIFE raw units mintable across all batches in one calendar day
+/// (5,000 LIFE).  Enforced via a DayAccum PDA; resets each new day.
+pub const CAP_PER_DAY: u64 = 5_000 * ONE_LIFE;
+
+/// Initial payout signer threshold (2-of-2 → 2-of-3 expansion target).
+pub const PAYOUT_THRESHOLD: u8 = 2;
+
+// ─── PDA seeds (C4 additions) ─────────────────────────────────────────────────
+
+pub const SEED_PAYOUT_CONFIG: &[u8] = b"payout_config";
+pub const SEED_BATCH_REPLAY: &[u8] = b"batch_replay";
+pub const SEED_DAY_ACCUM: &[u8] = b"day_accum";
+pub const SEED_DAY_ANCHOR: &[u8] = b"day_anchor";
+
+// ─── Registration (updated C4 values) ────────────────────────────────────────
+
+/// New anti-Sybil stake: 0.05 SOL (was 0.01 SOL).
+/// Recovered via `unstake_miner` when leaving in good standing.
+pub const REGISTRATION_STAKE_C4: u64 = 50_000_000; // lamports
+
+/// Holdback period in slots before stake can be withdrawn (~7 days at 400ms/slot).
+/// Gives validators time to flag any disputed activity.
+pub const UNSTAKE_HOLDBACK_SLOTS: u64 = 1_512_000; // ~7 days
+

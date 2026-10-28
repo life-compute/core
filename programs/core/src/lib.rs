@@ -174,4 +174,38 @@ pub mod life_core {
     pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
         instructions::register_validator::register_validator(ctx)
     }
+
+    // ── C4: Coordinator payout ────────────────────────────────────────────────
+
+    /// Authority-only: create the PayoutConfig PDA with initial caps + signers.
+    /// Must be called once after deployment.
+    pub fn initialize_payout_config(
+        ctx: Context<InitializePayoutConfig>,
+        signers: Vec<Pubkey>,
+        threshold: u8,
+    ) -> Result<()> {
+        instructions::initialize_payout_config::initialize_payout_config(ctx, signers, threshold)
+    }
+
+    /// Permissionless crank (relay): mint LIFE to a batch of recipients.
+    /// Requires Ed25519 multisig instructions prepended in the same tx.
+    pub fn payout_batch<'info>(
+        ctx: Context<'_, '_, '_, 'info, PayoutBatch<'info>>,
+        batch_id: u64,
+        day: u32,
+        entries: Vec<payout_batch::PayoutEntry>,
+        ed25519_ix_indices: Vec<u8>,
+    ) -> Result<()> {
+        instructions::payout_batch::payout_batch(ctx, batch_id, day, entries, ed25519_ix_indices)
+    }
+
+    /// Authority or validator: record one immutable 32-byte hash per calendar day.
+    pub fn anchor_hash(ctx: Context<AnchorHash>, day: u32, hash: [u8; 32]) -> Result<()> {
+        instructions::anchor_hash::anchor_hash(ctx, day, hash)
+    }
+
+    /// Miner reclaims 0.05 SOL stake when leaving in good standing.
+    pub fn unstake_miner(ctx: Context<UnstakeMiner>) -> Result<()> {
+        instructions::unstake_miner::unstake_miner(ctx)
+    }
 }

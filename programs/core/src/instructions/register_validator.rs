@@ -35,7 +35,7 @@ pub fn register_validator(ctx: Context<RegisterValidator>) -> Result<()> {
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
                 from: ctx.accounts.validator.to_account_info(),
-                to:   ctx.accounts.foundation.to_account_info(),
+                to:   ctx.accounts.fee_recipient.to_account_info(),
             },
         ),
         VALIDATOR_REGISTRATION_FEE,
@@ -80,10 +80,10 @@ pub struct RegisterValidator<'info> {
     /// Foundation wallet — receives the 0.05 SOL validator registration fee.
     #[account(
         mut,
-        constraint = foundation.key() == FOUNDATION_WALLET @ LifeError::Unauthorized,
+        constraint = fee_recipient.key() == REGISTRATION_FEE_RECIPIENT @ LifeError::Unauthorized,
     )]
     /// CHECK: externally-owned foundation wallet; no data expected.
-    pub foundation: UncheckedAccount<'info>,
+    pub fee_recipient: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }

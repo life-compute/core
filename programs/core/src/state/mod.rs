@@ -7,6 +7,11 @@ pub mod validation_record;
 pub mod validator_account;
 pub mod weekly_leaderboard;
 pub mod confirmed_molecule;
+// ─── C4: Coordinator payout accounts ─────────────────────────────────────────
+pub mod payout_config;
+pub mod batch_replay;
+pub mod day_accum;
+pub mod day_anchor;
 
 pub use network_config::*;
 pub use target_account::*;
@@ -17,3 +22,7 @@ pub use validation_record::*;
 pub use validator_account::*;
 pub use weekly_leaderboard::*;
 pub use confirmed_molecule::*;
+pub use payout_config::*;
+pub use batch_replay::*;
+pub use day_accum::*;
+pub use day_anchor::*;

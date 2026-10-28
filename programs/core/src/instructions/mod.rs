@@ -12,6 +12,11 @@ pub mod evict_validator;
 pub mod update_validators;
 pub mod set_tolerance;
 pub mod recount_confirmations;
+// ─── C4: Coordinator payout ───────────────────────────────────────────────────
+pub mod initialize_payout_config;
+pub mod payout_batch;
+pub mod anchor_hash;
+pub mod unstake_miner;
 
 pub use initialize::*;
 pub use register_target::*;
@@ -27,3 +32,8 @@ pub use evict_validator::*;
 pub use update_validators::*;
 pub use set_tolerance::*;
 pub use recount_confirmations::*;
+pub use initialize_payout_config::*;
+pub use payout_batch::*;
+pub use anchor_hash::*;
+pub use unstake_miner::*;
+

@@ -124,4 +124,39 @@ pub enum LifeError {
     // existing error and break clients matching on codes.
     #[msg("GPU model name exceeds the 30-byte limit")]
     GpuModelTooLong,
+
+    // ─── C4: Coordinator payout ──────────────────────────────────────────────
+    #[msg("Batch total exceeds per-batch LIFE cap")]
+    BatchCapExceeded,
+
+    #[msg("Day total would exceed per-day LIFE cap")]
+    DayCapExceeded,
+
+    #[msg("Not enough distinct registered signers")]
+    InsufficientSigners,
+
+    #[msg("Signer is not in the registered payout signer set")]
+    UnregisteredSigner,
+
+    #[msg("The same signer was counted more than once")]
+    DuplicateSigner,
+
+    #[msg("This batch_id has already been processed")]
+    BatchAlreadyProcessed,
+
+    #[msg("A day anchor has already been recorded for this day")]
+    AnchorAlreadyWritten,
+
+    // ─── C4: Unstake ─────────────────────────────────────────────────────────
+    #[msg("Miner has a failed verification that must be cleared before unstaking")]
+    FailedVerificationOpen,
+
+    #[msg("Miner has an open dispute that must be resolved before unstaking")]
+    OpenDisputeExists,
+
+    #[msg("Holdback period has not elapsed yet")]
+    HoldbackNotServed,
+
+    #[msg("Stake has already been returned")]
+    AlreadyUnstaked,
 }
