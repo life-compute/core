@@ -169,4 +169,15 @@ pub enum LifeError {
     /// Under the  feature claim_discovery_bonus is disabled.
     #[msg("claim_discovery_bonus is disabled in launch build; weekly discovery bonus removed")]
     DiscoveryBonusDisabled,
+
+    // ─── C4c: batch-content binding ──────────────────────────────────────────
+    /// The 32-byte message embedded in an Ed25519 instruction does not match
+    /// the hash the program computed from the instruction's own entry list.
+    /// This rejects substitution attacks: sign {A,B}, submit {X,Y}.
+    #[msg("Ed25519 message does not match the hash computed from the submitted entries")]
+    BatchHashMismatch,
+
+    /// Two entries in the batch share the same recipient wallet.
+    #[msg("Batch contains a duplicate recipient wallet")]
+    DuplicateRecipient,
 }

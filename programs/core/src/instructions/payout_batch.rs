@@ -1,4 +1,4 @@
-// ─── C4: payout_batch ────────────────────────────────────────────────────────
+// ─── C4c: payout_batch ───────────────────────────────────────────────────────
 //
 // Mints LIFE to a list of recipient ATAs, gated by:
 //   1. Per-batch cap  (PayoutConfig::cap_per_batch / CAP_PER_BATCH)
@@ -6,6 +6,27 @@
 //   3. Ed25519 multisig: threshold distinct registered signers must have
 //      pre-signed the batch hash via Ed25519 instructions in the same tx.
 //   4. Replay protection: BatchReplay PDA (init guard).
+//   5. Batch-content binding (C4c): the hash is computed from the entry list
+//      itself; any Ed25519 message that doesn't match is rejected.
+//   6. Sort + dedup: entries must be sorted by recipient pubkey ascending and
+//      no two entries may share the same recipient.
+//
+// Canonical batch hash (C4c)
+// ──────────────────────────
+// preimage = "LIFE-PAYOUT-V1"       (14 bytes, domain tag)
+//          ‖ program_id             (32 bytes)
+//          ‖ life_mint              (32 bytes)
+//          ‖ batch_id_le8           (u64, little-endian)
+//          ‖ day_le4                (u32, little-endian)
+//          ‖ entry_count_u8         (u8)
+//          ‖ [for each entry, sorted by recipient pubkey bytes ascending]
+//                recipient_pubkey   (32 bytes)
+//              ‖ amount_le8         (u64, little-endian)
+//
+// batch_hash = SHA-256(preimage)   (32 bytes)
+//
+// The Ed25519 verification instructions must carry exactly these 32 bytes as
+// their message.  Any deviation → BatchHashMismatch.
 //
 // Signature verification approach
 // ────────────────────────────────
@@ -24,12 +45,12 @@
 //     [14..15]  = msg_ix_index    = same
 //     [16..79]  = signature (64 bytes)
 //     [80..111] = pubkey   (32 bytes)
-//     [112..143]= message  (32 bytes — SHA-256(batch_id_le8 ‖ day_le4 ‖ total_le8))
+//     [112..143]= message  (32 bytes — canonical batch hash)
 //
 // The handler reads back the Instructions sysvar to confirm:
 //   (a) enough Ed25519 verify instructions exist before this ix
 //   (b) each claimed signer's pubkey matches a registered PayoutConfig signer
-//   (c) each verified message == batch_hash
+//   (c) each verified message == batch_hash  [new: BatchHashMismatch error]
 //   (d) no signer pubkey repeats (distinct set check)
 //
 // Governance note (req. 7)
@@ -52,6 +73,9 @@ use crate::constants::*;
 use crate::errors::LifeError;
 use crate::state::{DayAccum, BatchReplay, NetworkConfig, PayoutConfig};
 
+/// Domain tag for the canonical batch hash (C4c).
+const DOMAIN_TAG: &[u8] = b"LIFE-PAYOUT-V1";
+
 /// One entry in the payout list.
 /// The caller builds this list off-chain and passes it as an instruction argument.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -71,6 +95,37 @@ const ED25519_PUBKEY_OFFSET: usize = 80;
 /// Offset where the 32-byte message hash starts.
 const ED25519_MSG_OFFSET: usize = 112;
 
+/// Compute the canonical batch hash from the instruction's own data (C4c).
+///
+/// preimage = DOMAIN_TAG ‖ program_id ‖ life_mint ‖ batch_id_le8 ‖ day_le4
+///          ‖ entry_count_u8 ‖ (wallet32 ‖ amount_le8)*
+///
+/// Entries must already be sorted by recipient pubkey bytes ascending.
+fn compute_batch_hash(
+    program_id: &Pubkey,
+    life_mint: &Pubkey,
+    batch_id: u64,
+    day: u32,
+    entries: &[PayoutEntry],
+) -> [u8; 32] {
+    // Build preimage: variable-length, use a Vec to avoid large stack allocation.
+    let mut preimage: Vec<u8> = Vec::with_capacity(
+        DOMAIN_TAG.len() + 32 + 32 + 8 + 4 + 1 + entries.len() * 40,
+    );
+    preimage.extend_from_slice(DOMAIN_TAG);
+    preimage.extend_from_slice(program_id.as_ref());
+    preimage.extend_from_slice(life_mint.as_ref());
+    preimage.extend_from_slice(&batch_id.to_le_bytes());
+    preimage.extend_from_slice(&day.to_le_bytes());
+    preimage.push(entries.len() as u8);
+    for e in entries {
+        preimage.extend_from_slice(e.recipient.as_ref());
+        preimage.extend_from_slice(&e.amount.to_le_bytes());
+    }
+    // SHA-256 via Solana's hashv (which is SHA-256)
+    anchor_lang::solana_program::hash::hashv(&[&preimage]).to_bytes()
+}
+
 pub fn payout_batch<'info>(
     ctx: Context<'_, '_, '_, 'info, PayoutBatch<'info>>,
     batch_id: u64,
@@ -83,7 +138,15 @@ pub fn payout_batch<'info>(
     // ── 1. Basic bounds ──────────────────────────────────────────────────────
     require!(entries.len() <= MAX_BATCH_ENTRIES, LifeError::Overflow);
 
-    // ── 2. Compute batch total and check per-batch cap ───────────────────────
+    // ── 2. Sort check: entries must be in ascending recipient pubkey order ───
+    // Also check for duplicate recipients (DuplicateRecipient).
+    for i in 1..entries.len() {
+        let prev = entries[i - 1].recipient.as_ref();
+        let curr = entries[i].recipient.as_ref();
+        require!(prev < curr, LifeError::DuplicateRecipient);  // < catches both out-of-order and equal
+    }
+
+    // ── 3. Compute batch total and check per-batch cap ───────────────────────
     let mut batch_total: u64 = 0;
     for e in &entries {
         batch_total = batch_total
@@ -93,7 +156,7 @@ pub fn payout_batch<'info>(
     let config = &ctx.accounts.payout_config;
     require!(batch_total <= config.cap_per_batch, LifeError::BatchCapExceeded);
 
-    // ── 3. Per-day cap check ─────────────────────────────────────────────────
+    // ── 4. Per-day cap check ─────────────────────────────────────────────────
     let day_accum = &mut ctx.accounts.day_accum;
     let new_day_total = day_accum
         .day_minted
@@ -101,16 +164,18 @@ pub fn payout_batch<'info>(
         .ok_or(LifeError::Overflow)?;
     require!(new_day_total <= config.cap_per_day, LifeError::DayCapExceeded);
 
-    // ── 4. Batch hash: SHA-256(batch_id_le8 ‖ day_le4 ‖ total_le8) ──────────
-    let batch_hash: [u8; 32] = {
-        let mut buf = [0u8; 20];
-        buf[0..8].copy_from_slice(&batch_id.to_le_bytes());
-        buf[8..12].copy_from_slice(&day.to_le_bytes());
-        buf[12..20].copy_from_slice(&batch_total.to_le_bytes());
-        anchor_lang::solana_program::hash::hash(&buf).to_bytes()
-    };
+    // ── 5. Canonical batch hash from instruction data (C4c) ──────────────────
+    let program_id = ctx.program_id;
+    let life_mint_key = ctx.accounts.life_mint.key();
+    let batch_hash = compute_batch_hash(
+        program_id,
+        &life_mint_key,
+        batch_id,
+        day,
+        &entries,
+    );
 
-    // ── 5. Ed25519 multisig verification via Instructions sysvar ─────────────
+    // ── 6. Ed25519 multisig verification via Instructions sysvar ─────────────
     let ix_sysvar_info = &ctx.accounts.instructions_sysvar;
     let threshold = config.threshold as usize;
     require!(
@@ -137,14 +202,13 @@ pub fn payout_batch<'info>(
         // Ed25519 single-signature instruction layout:
         //   [0]      = num_signatures (must be 1)
         //   [1]      = padding
-        //   [2..3]   = signature_offset (LE u16) — typically 48 or 16+32=48
-        //   [4..5]   = signature_instruction_index (LE u16) — 0xFFFF = this ix
-        //   [6..7]   = public_key_offset (LE u16) — typically 16
+        //   [2..3]   = signature_offset (LE u16)
+        //   [4..5]   = signature_instruction_index (LE u16)
+        //   [6..7]   = public_key_offset (LE u16)
         //   [8..9]   = public_key_instruction_index (LE u16)
-        //   [10..11] = message_data_offset (LE u16) — typically 112
-        //   [12..13] = message_data_size (LE u16) — must be 32 for our hash
+        //   [10..11] = message_data_offset (LE u16)
+        //   [12..13] = message_data_size (LE u16) — must be 32
         //   [14..15] = message_instruction_index (LE u16)
-        //   followed by actual signature, public key, message bytes
         require!(data.len() >= 16, LifeError::Unauthorized);
         require!(data[0] == 1, LifeError::Unauthorized); // exactly one signature
 
@@ -164,8 +228,9 @@ pub fn payout_batch<'info>(
             .try_into()
             .map_err(|_| error!(LifeError::Unauthorized))?;
 
-        // Message must match our batch hash.
-        require!(msg_bytes == batch_hash, LifeError::Unauthorized);
+        // Message must match the hash we computed from our own entry list.
+        // This is the C4c binding check: prevents sign-one-set, submit-another.
+        require!(msg_bytes == batch_hash, LifeError::BatchHashMismatch);
 
         let signer_key = Pubkey::from(pubkey_bytes);
 
@@ -195,7 +260,7 @@ pub fn payout_batch<'info>(
 
     require!(valid_count >= threshold, LifeError::InsufficientSigners);
 
-    // ── 6. CEI: update state before any CPI ──────────────────────────────────
+    // ── 7. CEI: update state before any CPI ──────────────────────────────────
     day_accum.day_minted = new_day_total;
 
     let net_config = &mut ctx.accounts.network_config;
@@ -215,7 +280,7 @@ pub fn payout_batch<'info>(
     day_accum.day = day;
     day_accum.bump = ctx.bumps.day_accum;
 
-    // ── 7. CPI: mint to each recipient ATA (from remaining_accounts) ─────────
+    // ── 8. CPI: mint to each recipient ATA (from remaining_accounts) ─────────
     let mint_auth_seeds: &[&[u8]] = &[SEED_LIFE_MINT, b"authority", &[ctx.bumps.mint_authority]];
     let signer_seeds = &[mint_auth_seeds];
 

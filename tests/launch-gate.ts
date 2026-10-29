@@ -78,12 +78,40 @@ function u64le(n: BN): Buffer {
   b.writeBigUInt64LE(BigInt(n.toString()));
   return b;
 }
-function batchHash(batchId: BN, day: number, total: BN): Buffer {
-  const buf = Buffer.alloc(20);
-  buf.writeBigUInt64LE(BigInt(batchId.toString()), 0);
-  buf.writeUInt32LE(day, 8);
-  buf.writeBigUInt64LE(BigInt(total.toString()), 12);
-  return crypto.createHash("sha256").update(buf).digest();
+const DOMAIN_TAG_LG = Buffer.from("LIFE-PAYOUT-V1", "utf8");
+
+function sortHashEntriesLG(entries: Array<{recipient: PublicKey; amount: BN}>): Array<{recipient: PublicKey; amount: BN}> {
+  return [...entries].sort((a, b) => {
+    const ab = Buffer.from(a.recipient.toBytes());
+    const bb = Buffer.from(b.recipient.toBytes());
+    return ab.compare(bb);
+  });
+}
+
+function batchHash(
+  programId: PublicKey,
+  mintPda: PublicKey,
+  batchId: BN,
+  day: number,
+  entries: Array<{recipient: PublicKey; amount: BN}>,
+): Buffer {
+  // C4c canonical hash: LIFE-PAYOUT-V1 ‖ program_id ‖ mint ‖ batchId_le8 ‖ day_le4 ‖ count_u8 ‖ entries_sorted
+  const sorted = sortHashEntriesLG(entries);
+  const header = Buffer.alloc(91);
+  let off = 0;
+  DOMAIN_TAG_LG.copy(header, off); off += 14;
+  Buffer.from(programId.toBytes()).copy(header, off); off += 32;
+  Buffer.from(mintPda.toBytes()).copy(header, off); off += 32;
+  header.writeBigUInt64LE(BigInt(batchId.toString()), off); off += 8;
+  header.writeUInt32LE(day, off); off += 4;
+  header[off] = sorted.length; off += 1;
+  const entBufs = sorted.map(e => {
+    const b = Buffer.alloc(40);
+    Buffer.from(e.recipient.toBytes()).copy(b, 0);
+    b.writeBigUInt64LE(BigInt(e.amount.toString()), 32);
+    return b;
+  });
+  return crypto.createHash("sha256").update(Buffer.concat([header, ...entBufs])).digest();
 }
 
 describe("launch_gate", () => {
@@ -353,7 +381,7 @@ describe("launch_gate", () => {
     const day = 9001;
     const mintAmt = new BN(500_000); // 0.5 LIFE — well within 5000 cap
     const entries = [{ recipient: miner.publicKey, amount: mintAmt }];
-    const hash = batchHash(batchId, day, mintAmt);
+    const hash = batchHash(program.programId, mintPda, batchId, day, entries);
     const brPda = pda([S_BR, u64le(batchId)]);
     const daPda = pda([S_DA, u32le(day)]);
     const minerAta = await getOrCreateAta(mintPda, miner.publicKey, miner);
@@ -467,7 +495,7 @@ describe("launch_gate", () => {
     const day = 9999;
     const tooMuch = new BN(5001 * 1_000_000);
     const entries = [{ recipient: miner.publicKey, amount: tooMuch }];
-    const hash = batchHash(batchId, day, tooMuch);
+    const hash = batchHash(program.programId, mintPda, batchId, day, entries);
     const brPda = pda([S_BR, u64le(batchId)]);
     const daPda = pda([S_DA, u32le(day)]);
     const minerAta = await getOrCreateAta(mintPda, miner.publicKey, miner);
@@ -526,7 +554,7 @@ describe("launch_gate", () => {
     const day = 9002;
     const mintAmt = new BN(1_000_000);
     const entries = [{ recipient: miner.publicKey, amount: mintAmt }];
-    const hash = batchHash(batchId, day, mintAmt);
+    const hash = batchHash(program.programId, mintPda, batchId, day, entries);
     const brPda = pda([S_BR, u64le(batchId)]);
     const daPda = pda([S_DA, u32le(day)]);
     const minerAta = await getOrCreateAta(mintPda, miner.publicKey, miner);
@@ -586,7 +614,7 @@ describe("launch_gate", () => {
     const day = 9003;
     const mintAmt = new BN(1_000_000);
     const entries = [{ recipient: miner.publicKey, amount: mintAmt }];
-    const hash = batchHash(batchId, day, mintAmt);
+    const hash = batchHash(program.programId, mintPda, batchId, day, entries);
     const brPda = pda([S_BR, u64le(batchId)]);
     const daPda = pda([S_DA, u32le(day)]);
     const minerAta = await getOrCreateAta(mintPda, miner.publicKey, miner);
