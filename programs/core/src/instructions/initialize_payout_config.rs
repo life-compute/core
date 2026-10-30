@@ -26,6 +26,7 @@ pub fn initialize_payout_config(
     pc.cap_per_day = CAP_PER_DAY;
     pc.signer_count = signers.len() as u8;
     pc.threshold = threshold;
+    pc.backfill_window = DEFAULT_BACKFILL_WINDOW;
     pc.bump = ctx.bumps.payout_config;
 
     // Print the embedded fee-recipient address so it can be compared char-by-char.

@@ -180,4 +180,31 @@ pub enum LifeError {
     /// Two entries in the batch share the same recipient wallet.
     #[msg("Batch contains a duplicate recipient wallet")]
     DuplicateRecipient,
+
+    // ─── C4d: Ed25519 instruction-index binding ───────────────────────────────
+    /// An Ed25519 verify instruction has instruction-index fields that point to
+    /// a different instruction rather than themselves (0xFFFF = self-referential).
+    /// This prevents the index-redirect attack where a stale signature over an
+    /// old message is replayed into a new transaction.
+    #[msg("Ed25519 instruction-index fields must all be 0xFFFF (self-referential)")]
+    Ed25519IndexMismatch,
+
+    /// An Ed25519 verify instruction carries zero or more-than-one signature.
+    /// Exactly one signature per instruction is required.
+    #[msg("Ed25519 instruction must carry exactly one signature")]
+    Ed25519BadSigCount,
+
+    /// The Ed25519 verify instruction's program id is not the native Ed25519 program.
+    #[msg("Instruction is not from the Ed25519 native program")]
+    Ed25519WrongProgram,
+
+    /// The message embedded in an Ed25519 instruction is not exactly 32 bytes.
+    #[msg("Ed25519 message must be exactly 32 bytes")]
+    Ed25519BadMsgLen,
+
+    // ─── C4d: day-window enforcement ─────────────────────────────────────────
+    /// The batch's day is either in the future (past the current chain day minus 1)
+    /// or older than the configured backfill window (current chain day minus backfill_window).
+    #[msg("Batch day is outside the allowed window (must be yesterday or within backfill_window days ago)")]
+    DayOutOfWindow,
 }

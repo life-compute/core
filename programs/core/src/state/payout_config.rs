@@ -39,6 +39,10 @@ pub struct PayoutConfig {
     /// How many distinct registered signers must sign each batch.
     pub threshold: u8,
 
+    /// How many days in the past a batch may still be submitted.
+    /// A batch for day D is valid when: chain_day - backfill_window ≤ D ≤ chain_day - 1.
+    pub backfill_window: u32,
+
     /// Canonical bump for this PDA.
     pub bump: u8,
 }
@@ -50,8 +54,9 @@ impl PayoutConfig {
         + 32 * 3 // signers [Pubkey; 3]
         + 1   // signer_count
         + 1   // threshold
+        + 4   // backfill_window
         + 1   // bump
-        + 32; // padding
+        + 28; // padding
 
     /// Returns true if `key` is in the active signer set.
     pub fn is_registered_signer(&self, key: &Pubkey) -> bool {

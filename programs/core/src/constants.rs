@@ -203,6 +203,14 @@ pub const SEED_BATCH_REPLAY: &[u8] = b"batch_replay";
 pub const SEED_DAY_ACCUM: &[u8] = b"day_accum";
 pub const SEED_DAY_ANCHOR: &[u8] = b"day_anchor";
 
+// ─── C4d: day-window constants ────────────────────────────────────────────────
+
+/// Default backfill window: how many days in the past a payout may still be
+/// submitted.  A batch for day D is accepted when:
+///   chain_day - backfill_window  ≤  D  ≤  chain_day - 1
+/// (D must have already ended AND must not be too old.)
+pub const DEFAULT_BACKFILL_WINDOW: u32 = 7;
+
 // ─── Registration (updated C4 values) ────────────────────────────────────────
 
 /// New anti-Sybil stake: 0.05 SOL (was 0.01 SOL).

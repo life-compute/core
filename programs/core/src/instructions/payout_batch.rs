@@ -1,4 +1,4 @@
-// ─── C4c: payout_batch ───────────────────────────────────────────────────────
+// ─── C4d: payout_batch ───────────────────────────────────────────────────────
 //
 // Mints LIFE to a list of recipient ATAs, gated by:
 //   1. Per-batch cap  (PayoutConfig::cap_per_batch / CAP_PER_BATCH)
@@ -10,9 +10,19 @@
 //      itself; any Ed25519 message that doesn't match is rejected.
 //   6. Sort + dedup: entries must be sorted by recipient pubkey ascending and
 //      no two entries may share the same recipient.
+//   7. Ed25519 instruction-index binding (C4d): every Ed25519 instruction's
+//      three ix-index fields (sig, pubkey, message) must all equal 0xFFFF,
+//      meaning "read from this instruction's own data".  Any other value
+//      would allow an attacker to point the validator at data from a different
+//      instruction (the old-signature / index-redirect attack).
+//   8. Day-window enforcement (C4d): the `day` argument must satisfy
+//          chain_day - backfill_window  ≤  day  ≤  chain_day - 1
+//      where chain_day = Clock::unix_timestamp / 86_400.
+//      "yesterday or within backfill_window days ago" — a day that has ended
+//      but is not so old it falls outside the configured window.
 //
-// Canonical batch hash (C4c)
-// ──────────────────────────
+// Canonical batch hash (C4c, unchanged)
+// ──────────────────────────────────────
 // preimage = "LIFE-PAYOUT-V1"       (14 bytes, domain tag)
 //          ‖ program_id             (32 bytes)
 //          ‖ life_mint              (32 bytes)
@@ -25,33 +35,37 @@
 //
 // batch_hash = SHA-256(preimage)   (32 bytes)
 //
-// The Ed25519 verification instructions must carry exactly these 32 bytes as
-// their message.  Any deviation → BatchHashMismatch.
+// Ed25519 instruction layout (single-signature canonical form, C4d-required)
+// ─────────────────────────────────────────────────────────────────────────────
+// Every Ed25519 instruction passed to this handler MUST use the canonical
+// self-contained layout in which ALL three instruction-index fields equal 0xFFFF
+// (the sentinel meaning "read from this instruction's own data").
 //
-// Signature verification approach
-// ────────────────────────────────
-// The caller prepends Ed25519 verify instructions to the transaction
-// (one per signature) using Solana's native Ed25519 program:
 //   program_id = ed25519_program_id()
 //   data layout per instruction:
-//     [0]       = 1 (num_signatures)
+//     [0]       = 1 (num_signatures — exactly one required)
 //     [1]       = padding
-//     [2..3]    = sig_offset      = 16
-//     [4..5]    = sig_ix_index    = this instruction's index in the tx
-//     [6..7]    = pubkey_offset   = 80
-//     [8..9]    = pubkey_ix_index = same
-//     [10..11]  = msg_offset      = 112
-//     [12..13]  = msg_size        = 32 (the batch hash)
-//     [14..15]  = msg_ix_index    = same
+//     [2..3]    = sig_offset      = 16   (LE u16)
+//     [4..5]    = sig_ix_index    = 0xFFFF (LE u16)  ← REQUIRED by C4d
+//     [6..7]    = pubkey_offset   = 80   (LE u16)
+//     [8..9]    = pubkey_ix_index = 0xFFFF (LE u16)  ← REQUIRED by C4d
+//     [10..11]  = msg_offset      = 112  (LE u16)
+//     [12..13]  = msg_size        = 32   (LE u16)  ← exactly 32 required
+//     [14..15]  = msg_ix_index    = 0xFFFF (LE u16)  ← REQUIRED by C4d
 //     [16..79]  = signature (64 bytes)
 //     [80..111] = pubkey   (32 bytes)
 //     [112..143]= message  (32 bytes — canonical batch hash)
 //
 // The handler reads back the Instructions sysvar to confirm:
 //   (a) enough Ed25519 verify instructions exist before this ix
-//   (b) each claimed signer's pubkey matches a registered PayoutConfig signer
-//   (c) each verified message == batch_hash  [new: BatchHashMismatch error]
-//   (d) no signer pubkey repeats (distinct set check)
+//   (b) program_id is ed25519_program::id()          [Ed25519WrongProgram]
+//   (c) num_signatures == 1                           [Ed25519BadSigCount]
+//   (d) all three ix_index fields == 0xFFFF           [Ed25519IndexMismatch]
+//   (e) msg_size == 32                                [Ed25519BadMsgLen]
+//   (f) message == batch_hash                         [BatchHashMismatch]
+//   (g) pubkey is a registered signer                 [UnregisteredSigner]
+//   (h) no pubkey appears twice                       [DuplicateSigner]
+//   (i) day is in the allowed window                  [DayOutOfWindow]
 //
 // Governance note (req. 7)
 // ────────────────────────
@@ -75,6 +89,11 @@ use crate::state::{DayAccum, BatchReplay, NetworkConfig, PayoutConfig};
 
 /// Domain tag for the canonical batch hash (C4c).
 const DOMAIN_TAG: &[u8] = b"LIFE-PAYOUT-V1";
+
+/// Sentinel instruction-index value meaning "read from this instruction's own data".
+/// All three instruction-index fields in an Ed25519 verify instruction must equal
+/// this value (C4d requirement).
+const IX_INDEX_SELF: u16 = 0xFFFF;
 
 /// One entry in the payout list.
 /// The caller builds this list off-chain and passes it as an instruction argument.
@@ -156,7 +175,23 @@ pub fn payout_batch<'info>(
     let config = &ctx.accounts.payout_config;
     require!(batch_total <= config.cap_per_batch, LifeError::BatchCapExceeded);
 
-    // ── 4. Per-day cap check ─────────────────────────────────────────────────
+    // ── 4. Day-window check (C4d) ────────────────────────────────────────────
+    // chain_day = clock.unix_timestamp / 86_400.
+    // Allowed: chain_day - backfill_window  ≤  day  ≤  chain_day - 1
+    {
+        let clock = Clock::get()?;
+        // unix_timestamp is i64; a negative clock should not happen on any real
+        // cluster but guard defensively so we never underflow.
+        let chain_day = clock.unix_timestamp.max(0) as u64 / 86_400;
+        let day64 = day as u64;
+        // day must be strictly in the past (≤ chain_day - 1)
+        require!(day64 < chain_day, LifeError::DayOutOfWindow);
+        // day must not be older than backfill_window days
+        let oldest_allowed = chain_day.saturating_sub(config.backfill_window as u64);
+        require!(day64 >= oldest_allowed, LifeError::DayOutOfWindow);
+    }
+
+    // ── 5. Per-day cap check ─────────────────────────────────────────────────
     let day_accum = &mut ctx.accounts.day_accum;
     let new_day_total = day_accum
         .day_minted
@@ -164,7 +199,7 @@ pub fn payout_batch<'info>(
         .ok_or(LifeError::Overflow)?;
     require!(new_day_total <= config.cap_per_day, LifeError::DayCapExceeded);
 
-    // ── 5. Canonical batch hash from instruction data (C4c) ──────────────────
+    // ── 6. Canonical batch hash from instruction data (C4c) ──────────────────
     let program_id = ctx.program_id;
     let life_mint_key = ctx.accounts.life_mint.key();
     let batch_hash = compute_batch_hash(
@@ -175,7 +210,21 @@ pub fn payout_batch<'info>(
         &entries,
     );
 
-    // ── 6. Ed25519 multisig verification via Instructions sysvar ─────────────
+    // ── 7. Ed25519 multisig verification via Instructions sysvar (C4d) ───────
+    //
+    // C4d adds three new checks per instruction:
+    //   (a) program_id must be ed25519_program::id()
+    //   (b) num_signatures must equal 1
+    //   (c) all three instruction-index fields must equal 0xFFFF (self-referential)
+    //   (d) msg_size must equal 32
+    //
+    // Together these prevent the "index-redirect attack": an attacker who has a
+    // valid signature by signer B over an *old* batch hash cannot reuse it in a
+    // new transaction by pointing the sig/pubkey/message ix-index fields at
+    // instruction slots that contain the old data.  When all fields are 0xFFFF,
+    // the Ed25519 precompile always reads from the current instruction's own data,
+    // so the message field IS the 32-byte message in that instruction — which must
+    // equal the batch_hash we computed above.
     let ix_sysvar_info = &ctx.accounts.instructions_sysvar;
     let threshold = config.threshold as usize;
     require!(
@@ -192,32 +241,44 @@ pub fn payout_batch<'info>(
         let ix = ix_sysvar::load_instruction_at_checked(ix_idx as usize, ix_sysvar_info)
             .map_err(|_| error!(LifeError::Unauthorized))?;
 
-        // Must be an Ed25519 verify instruction.
+        // (a) Must be an Ed25519 verify instruction.
         require!(
             ix.program_id == ed25519_program::id(),
-            LifeError::UnregisteredSigner
+            LifeError::Ed25519WrongProgram
         );
 
         let data = &ix.data;
         // Ed25519 single-signature instruction layout:
-        //   [0]      = num_signatures (must be 1)
+        //   [0]      = num_signatures
         //   [1]      = padding
         //   [2..3]   = signature_offset (LE u16)
-        //   [4..5]   = signature_instruction_index (LE u16)
+        //   [4..5]   = signature_instruction_index (LE u16)  ← must be 0xFFFF
         //   [6..7]   = public_key_offset (LE u16)
-        //   [8..9]   = public_key_instruction_index (LE u16)
+        //   [8..9]   = public_key_instruction_index (LE u16) ← must be 0xFFFF
         //   [10..11] = message_data_offset (LE u16)
-        //   [12..13] = message_data_size (LE u16) — must be 32
-        //   [14..15] = message_instruction_index (LE u16)
+        //   [12..13] = message_data_size (LE u16)            ← must be 32
+        //   [14..15] = message_instruction_index (LE u16)    ← must be 0xFFFF
         require!(data.len() >= 16, LifeError::Unauthorized);
-        require!(data[0] == 1, LifeError::Unauthorized); // exactly one signature
 
-        let pk_offset = u16::from_le_bytes([data[6], data[7]]) as usize;
+        // (b) Exactly one signature.
+        require!(data[0] == 1, LifeError::Ed25519BadSigCount);
+
+        // (c) All three instruction-index fields must be 0xFFFF.
+        let sig_ix_idx    = u16::from_le_bytes([data[4],  data[5]]);
+        let pk_ix_idx     = u16::from_le_bytes([data[8],  data[9]]);
+        let msg_ix_idx    = u16::from_le_bytes([data[14], data[15]]);
+        require!(
+            sig_ix_idx == IX_INDEX_SELF && pk_ix_idx == IX_INDEX_SELF && msg_ix_idx == IX_INDEX_SELF,
+            LifeError::Ed25519IndexMismatch
+        );
+
+        let pk_offset  = u16::from_le_bytes([data[6],  data[7]])  as usize;
         let msg_offset = u16::from_le_bytes([data[10], data[11]]) as usize;
-        let msg_size = u16::from_le_bytes([data[12], data[13]]) as usize;
+        let msg_size   = u16::from_le_bytes([data[12], data[13]]) as usize;
 
-        require!(msg_size == 32, LifeError::Unauthorized);
-        require!(data.len() >= pk_offset + 32, LifeError::Unauthorized);
+        // (d) Message must be exactly 32 bytes.
+        require!(msg_size == 32, LifeError::Ed25519BadMsgLen);
+        require!(data.len() >= pk_offset + 32,  LifeError::Unauthorized);
         require!(data.len() >= msg_offset + 32, LifeError::Unauthorized);
 
         // Extract pubkey and message from the instruction data.
@@ -228,19 +289,19 @@ pub fn payout_batch<'info>(
             .try_into()
             .map_err(|_| error!(LifeError::Unauthorized))?;
 
-        // Message must match the hash we computed from our own entry list.
+        // (e) Message must match the hash we computed from our own entry list.
         // This is the C4c binding check: prevents sign-one-set, submit-another.
         require!(msg_bytes == batch_hash, LifeError::BatchHashMismatch);
 
         let signer_key = Pubkey::from(pubkey_bytes);
 
-        // Signer must be registered.
+        // (f) Signer must be registered.
         require!(
             config.is_registered_signer(&signer_key),
             LifeError::UnregisteredSigner
         );
 
-        // No duplicates.
+        // (g) No duplicates.
         for s in &seen {
             if let Some(k) = s {
                 require!(k != &signer_key, LifeError::DuplicateSigner);
@@ -260,7 +321,7 @@ pub fn payout_batch<'info>(
 
     require!(valid_count >= threshold, LifeError::InsufficientSigners);
 
-    // ── 7. CEI: update state before any CPI ──────────────────────────────────
+    // ── 8. CEI: update state before any CPI ──────────────────────────────────
     day_accum.day_minted = new_day_total;
 
     let net_config = &mut ctx.accounts.network_config;
@@ -280,7 +341,7 @@ pub fn payout_batch<'info>(
     day_accum.day = day;
     day_accum.bump = ctx.bumps.day_accum;
 
-    // ── 8. CPI: mint to each recipient ATA (from remaining_accounts) ─────────
+    // ── 9. CPI: mint to each recipient ATA (from remaining_accounts) ─────────
     let mint_auth_seeds: &[&[u8]] = &[SEED_LIFE_MINT, b"authority", &[ctx.bumps.mint_authority]];
     let signer_seeds = &[mint_auth_seeds];
 
