@@ -9,7 +9,7 @@ skip-lint = false
 life_core = "BU7WVCvy9CqypB7Hqhw6RJakAeSieVsWNapytQpFgi18"
 
 [programs.devnet]
-life_core = "74RHjg1zYgN9zuVykde4SK2ERiRgNkouATW9MmQDLRWf"
+life_core = "HhS2coMkjRc5SSPsJn4mTXcFYwWL9hz6cfAzoWKymadv"
 
 [registry]
 url = "https://api.apr.dev"
