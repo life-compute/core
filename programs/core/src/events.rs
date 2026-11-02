@@ -121,3 +121,25 @@ pub struct ValidatorCommissionMinted {
     pub amount_raw: u64,
     pub slot: i64,
 }
+
+/// Emitted when update_payout_config changes the signer set, threshold, caps, or window (C38).
+#[event]
+pub struct PayoutConfigUpdated {
+    pub authority: Pubkey,
+    pub signer_count: u8,
+    pub threshold: u8,
+    pub cap_per_batch: u64,
+    pub cap_per_day: u64,
+    pub backfill_window: u32,
+    pub slot: i64,
+}
+
+/// Emitted when set_payout_caps changes caps or the paused flag (C38).
+#[event]
+pub struct PayoutCapsSet {
+    pub authority: Pubkey,
+    pub cap_per_batch: u64,
+    pub cap_per_day: u64,
+    pub paused: bool,
+    pub slot: i64,
+}

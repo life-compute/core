@@ -208,4 +208,34 @@ pub mod life_core {
     pub fn unstake_miner(ctx: Context<UnstakeMiner>) -> Result<()> {
         instructions::unstake_miner::unstake_miner(ctx)
     }
+
+    // ── C38: payout admin ─────────────────────────────────────────────────────
+
+    /// Authority-only: rotate signers, threshold, caps and backfill window on the PayoutConfig.
+    /// Account size is unchanged — fits in the pre-existing 28-byte padding region.
+    pub fn update_payout_config(
+        ctx: Context<UpdatePayoutConfig>,
+        signers: Vec<Pubkey>,
+        signer_count: u8,
+        threshold: u8,
+        cap_per_batch: u64,
+        cap_per_day: u64,
+        backfill_window: u32,
+    ) -> Result<()> {
+        instructions::update_payout_config::update_payout_config(
+            ctx, signers, signer_count, threshold, cap_per_batch, cap_per_day, backfill_window,
+        )
+    }
+
+    /// Authority-only: adjust per-batch cap, per-day cap, and the paused flag.
+    /// While paused, payout_batch returns PayoutPaused.
+    /// Unpausing (paused=false) resumes normal operation immediately.
+    pub fn set_payout_caps(
+        ctx: Context<SetPayoutCaps>,
+        cap_per_batch: u64,
+        cap_per_day: u64,
+        paused: bool,
+    ) -> Result<()> {
+        instructions::set_payout_caps::set_payout_caps(ctx, cap_per_batch, cap_per_day, paused)
+    }
 }

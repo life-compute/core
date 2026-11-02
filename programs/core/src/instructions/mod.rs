@@ -17,6 +17,9 @@ pub mod initialize_payout_config;
 pub mod payout_batch;
 pub mod anchor_hash;
 pub mod unstake_miner;
+// ─── C38: payout admin ───────────────────────────────────────────────────────
+pub mod update_payout_config;
+pub mod set_payout_caps;
 
 pub use initialize::*;
 pub use register_target::*;
@@ -36,4 +39,6 @@ pub use initialize_payout_config::*;
 pub use payout_batch::*;
 pub use anchor_hash::*;
 pub use unstake_miner::*;
+pub use update_payout_config::*;
+pub use set_payout_caps::*;
 

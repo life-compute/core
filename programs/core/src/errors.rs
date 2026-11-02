@@ -207,4 +207,9 @@ pub enum LifeError {
     /// or older than the configured backfill window (current chain day minus backfill_window).
     #[msg("Batch day is outside the allowed window (must be yesterday or within backfill_window days ago)")]
     DayOutOfWindow,
+
+    // ─── C38: payout admin ───────────────────────────────────────────────────
+    /// Payout is currently paused; no batches may be processed.
+    #[msg("Payout is paused; call set_payout_caps with paused=false to resume")]
+    PayoutPaused,
 }

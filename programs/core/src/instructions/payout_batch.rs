@@ -157,6 +157,9 @@ pub fn payout_batch<'info>(
     // ── 1. Basic bounds ──────────────────────────────────────────────────────
     require!(entries.len() <= MAX_BATCH_ENTRIES, LifeError::Overflow);
 
+    // ── 1b. Paused check (C38) ────────────────────────────────────────────────
+    require!(!ctx.accounts.payout_config.is_paused(), LifeError::PayoutPaused);
+
     // ── 2. Sort check: entries must be in ascending recipient pubkey order ───
     // Also check for duplicate recipients (DuplicateRecipient).
     for i in 1..entries.len() {

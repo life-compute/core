@@ -28,6 +28,7 @@ pub fn initialize_payout_config(
     pc.threshold = threshold;
     pc.backfill_window = DEFAULT_BACKFILL_WINDOW;
     pc.bump = ctx.bumps.payout_config;
+    pc.paused = 0; // C38: explicitly not paused; zero means unpaused for existing accounts too
 
     // Print the embedded fee-recipient address so it can be compared char-by-char.
     msg!(

@@ -6,14 +6,10 @@ use anchor_lang::prelude::*;
 /// Holds per-batch and per-day LIFE mint caps, the multisig signer set,
 /// and the required signature threshold for `payout_batch`.
 ///
-/// Changes require the upgrade-authority (or a future Squads multisig that
-/// holds that authority).  No instruction mutates this account in C4 beyond
-/// what the upgrade-authority controls directly:
-///   • To rotate signers or change caps: the upgrade-authority calls
-///     `update_payout_config` (not yet added) or, if program control has
-///     been transferred to a Squads vault, proposes a transaction via
-///     Squads v4 `createTransaction` → approval → `executeTransaction`.
-///     Describe-only in this stage; no key material is created.
+/// C38 additions (no reallocation — fits in the existing 28-byte padding):
+///   • `update_payout_config` — authority rotates signers/threshold/caps/window.
+///   • `set_payout_caps`      — authority adjusts caps and the `paused` flag.
+///   • `paused` byte occupies padding[0]; zero → not paused (existing accounts valid).
 ///
 /// On-chain layout (discriminator 8 + fields below):
 #[account]
@@ -45,6 +41,14 @@ pub struct PayoutConfig {
 
     /// Canonical bump for this PDA.
     pub bump: u8,
+
+    /// C38: pause flag. Non-zero → `payout_batch` returns PayoutPaused.
+    /// Stored in the first byte of the former 28-byte padding region.
+    /// Existing accounts have zero here → not paused (backward-compatible).
+    pub paused: u8,
+
+    /// Padding reserved for future fields (27 remaining bytes after paused).
+    pub _padding: [u8; 27],
 }
 
 impl PayoutConfig {
@@ -56,10 +60,16 @@ impl PayoutConfig {
         + 1   // threshold
         + 4   // backfill_window
         + 1   // bump
-        + 28; // padding
+        + 1   // paused  (C38)
+        + 27; // _padding (27 remaining bytes)
 
     /// Returns true if `key` is in the active signer set.
     pub fn is_registered_signer(&self, key: &Pubkey) -> bool {
         self.signers[..self.signer_count as usize].contains(key)
+    }
+
+    /// Returns true when payouts are paused (C38).
+    pub fn is_paused(&self) -> bool {
+        self.paused != 0
     }
 }

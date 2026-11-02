@@ -1,5 +1,5 @@
 {
-  "address": "BU7WVCvy9CqypB7Hqhw6RJakAeSieVsWNapytQpFgi18",
+  "address": "GzWF1tXZpDZaCPzj7QAP2S9haRwyWojGzu9JtFzP7vqV",
   "metadata": {
     "name": "life_core",
     "version": "0.1.0",
@@ -882,6 +882,192 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "update_payout_config",
+      "discriminator": [
+        138,
+        7,
+        27,
+        84,
+        247,
+        253,
+        152,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "networkConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  101,
+                  116,
+                  119,
+                  111,
+                  114,
+                  107,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payoutConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  111,
+                  117,
+                  116,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "signers",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "signerCount",
+          "type": "u8"
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        },
+        {
+          "name": "capPerBatch",
+          "type": "u64"
+        },
+        {
+          "name": "capPerDay",
+          "type": "u64"
+        },
+        {
+          "name": "backfillWindow",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "set_payout_caps",
+      "discriminator": [
+        34,
+        197,
+        60,
+        191,
+        249,
+        28,
+        86,
+        193
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "networkConfig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  101,
+                  116,
+                  119,
+                  111,
+                  114,
+                  107,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payoutConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  111,
+                  117,
+                  116,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "capPerBatch",
+          "type": "u64"
+        },
+        {
+          "name": "capPerDay",
+          "type": "u64"
+        },
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1112,6 +1298,21 @@
       "code": 6013,
       "name": "DuplicateMolecule",
       "msg": "This SMILES/gRNA has already been confirmed for this target by another wallet \u2014 duplicate submission blocked"
+    },
+    {
+      "code": 6047,
+      "name": "BatchHashMismatch",
+      "msg": "Ed25519 message does not match the hash computed from the submitted entries"
+    },
+    {
+      "code": 6048,
+      "name": "DuplicateRecipient",
+      "msg": "Batch contains a duplicate recipient wallet"
+    },
+    {
+      "code": 6049,
+      "name": "PayoutPaused",
+      "msg": "Payout is paused; call set_payout_caps with paused=false to resume"
     }
   ],
   "types": [
@@ -1654,8 +1855,25 @@
             "type": "u8"
           },
           {
+            "name": "backfillWindow",
+            "type": "u32"
+          },
+          {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                27
+              ]
+            }
           }
         ]
       }
