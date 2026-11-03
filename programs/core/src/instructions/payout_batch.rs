@@ -77,7 +77,9 @@
 //   1. Authority (Squads vault PDA) calls `createTransaction` on Squads v4.
 //   2. Required members approve via `approve`.
 //   3. `executeTransaction` issues the CPI that calls `update_payout_config`.
-// No keys are created in this stage; the path is described, not implemented.
+// Both `update_payout_config` and `set_payout_caps` are implemented in C38.
+// While `PayoutConfig::paused != 0`, `payout_batch` returns PayoutPaused
+// immediately (check  9 below — gating is the first body statement).
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as ix_sysvar;

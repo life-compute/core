@@ -7,9 +7,18 @@ use anchor_lang::prelude::*;
 /// and the required signature threshold for `payout_batch`.
 ///
 /// C38 additions (no reallocation — fits in the existing 28-byte padding):
-///   • `update_payout_config` — authority rotates signers/threshold/caps/window.
-///   • `set_payout_caps`      — authority adjusts caps and the `paused` flag.
-///   • `paused` byte occupies padding[0]; zero → not paused (existing accounts valid).
+///   • `update_payout_config` — authority rotates signers (1–3, dedup, no zero key),
+///                               threshold (1..=signer_count), caps (>0), and
+///                               backfill window (1..=30). Emits PayoutConfigUpdated.
+///   • `set_payout_caps`      — authority adjusts cap_per_batch, cap_per_day, and
+///                               the `paused` flag. Emits PayoutCapsSet.
+///   • `paused` byte occupies padding[0]; zero → not paused (existing accounts valid,
+///     backward-compatible). While non-zero, `payout_batch` returns PayoutPaused.
+///   • Authority field: the account that may call `update_payout_config` and
+///     `set_payout_caps` is the upgrade authority stored in the program's
+///     `BpfLoaderUpgradeable` data account (or the Squads v4 vault PDA on mainnet).
+///     It is not stored redundantly here — the instruction handlers derive it from
+///     the BpfLoaderUpgradeable `ProgramData` account at call time.
 ///
 /// On-chain layout (discriminator 8 + fields below):
 #[account]
